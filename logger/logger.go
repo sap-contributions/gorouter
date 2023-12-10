@@ -79,9 +79,27 @@ func (l *logger) SessionName() string {
 	return l.source
 }
 
+type wrappedFields struct {
+	contextFields []zap.Field
+	fields        []zap.Field
+}
+
+func (wf wrappedFields) MarshalLog(kv zap.KeyValue) error {
+	addWrappedFields(kv, wf.contextFields, wf.fields)
+	return nil
+}
+
+func addWrappedFields(kv zap.KeyValue, context, fields []zap.Field) {
+	for _, f := range context {
+		f.AddTo(kv)
+	}
+	for _, f := range fields {
+		f.AddTo(kv)
+	}
+}
+
 func (l *logger) wrapDataFields(fields ...zap.Field) zap.Field {
-	finalFields := append(l.context, fields...)
-	return zap.Nest("data", finalFields...)
+	return zap.Marshaler("data", wrappedFields{contextFields: l.context, fields: fields})
 }
 
 func (l *logger) With(fields ...zap.Field) Logger {
