@@ -20,8 +20,8 @@ func (r *Trie) Find(uri route.Uri) *route.EndpointPool {
 	node := r
 
 	for {
-		pathParts := parts(key)
-		SegmentValue := pathParts[0]
+		before, after, found := strings.Cut(key, "/")
+		SegmentValue := before
 
 		matchingChild, ok := node.ChildNodes[SegmentValue]
 		if !ok {
@@ -30,11 +30,11 @@ func (r *Trie) Find(uri route.Uri) *route.EndpointPool {
 
 		node = matchingChild
 
-		if len(pathParts) <= 1 {
+		if !found {
 			break
 		}
 
-		key = pathParts[1]
+		key = after
 	}
 
 	if nil != node.Pool {
@@ -51,8 +51,8 @@ func (r *Trie) MatchUri(uri route.Uri) *route.EndpointPool {
 	var lastPool *route.EndpointPool
 
 	for {
-		pathParts := parts(key)
-		SegmentValue := pathParts[0]
+		before, after, found := strings.Cut(key, "/")
+		SegmentValue := before
 
 		matchingChild, ok := node.ChildNodes[SegmentValue]
 		if !ok {
@@ -66,11 +66,11 @@ func (r *Trie) MatchUri(uri route.Uri) *route.EndpointPool {
 			lastPool = node.Pool
 		}
 
-		if len(pathParts) <= 1 {
+		if !found {
 			break
 		}
 
-		key = pathParts[1]
+		key = after
 	}
 
 	// Prefer lastPool over node.Pool since we know it must have endpoints
@@ -86,8 +86,8 @@ func (r *Trie) Insert(uri route.Uri, value *route.EndpointPool) *Trie {
 	node := r
 
 	for {
-		pathParts := parts(key)
-		SegmentValue := pathParts[0]
+		before, after, found := strings.Cut(key, "/")
+		SegmentValue := before
 
 		matchingChild, ok := node.ChildNodes[SegmentValue]
 
@@ -100,11 +100,11 @@ func (r *Trie) Insert(uri route.Uri, value *route.EndpointPool) *Trie {
 
 		node = matchingChild
 
-		if len(pathParts) != 2 {
+		if !found {
 			break
 		}
 
-		key = pathParts[1]
+		key = after
 	}
 
 	node.Pool = value
@@ -117,8 +117,8 @@ func (r *Trie) Delete(uri route.Uri) bool {
 	initialKey := key
 
 	for {
-		pathParts := parts(key)
-		SegmentValue := pathParts[0]
+		before, after, found := strings.Cut(key, "/")
+		SegmentValue := before
 
 		// It is currently impossible to Delete a non-existent path. This invariant is
 		// provided by the fact that a call to Find is done before Delete in the registry.
@@ -126,11 +126,11 @@ func (r *Trie) Delete(uri route.Uri) bool {
 
 		node = matchingChild
 
-		if len(pathParts) <= 1 {
+		if !found {
 			break
 		}
 
-		key = pathParts[1]
+		key = after
 	}
 	node.Pool = nil
 	r.deleteEmptyNodes(initialKey)
@@ -144,8 +144,8 @@ func (r *Trie) deleteEmptyNodes(key string) {
 	var nodeToRemove *Trie
 
 	for {
-		pathParts := parts(key)
-		SegmentValue := pathParts[0]
+		before, after, found := strings.Cut(key, "/")
+		SegmentValue := before
 
 		matchingChild, _ := node.ChildNodes[SegmentValue]
 
@@ -158,11 +158,11 @@ func (r *Trie) deleteEmptyNodes(key string) {
 
 		node = matchingChild
 
-		if len(pathParts) <= 1 {
+		if !found {
 			break
 		}
 
-		key = pathParts[1]
+		key = after
 	}
 
 	if node.isLeaf() {
@@ -275,8 +275,4 @@ func (r *Trie) isRoot() bool {
 
 func (r *Trie) isLeaf() bool {
 	return len(r.ChildNodes) == 0
-}
-
-func parts(key string) []string {
-	return strings.SplitN(key, "/", 2)
 }
