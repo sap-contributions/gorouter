@@ -14,10 +14,9 @@ import (
 	"go.step.sm/crypto/pemutil"
 
 	"code.cloudfoundry.org/gorouter/logger"
-	"github.com/uber-go/zap"
-	"gopkg.in/yaml.v2"
-
 	"code.cloudfoundry.org/localip"
+	"go.uber.org/zap"
+	"gopkg.in/yaml.v2"
 	"slices"
 )
 
@@ -333,7 +332,7 @@ func checkClientCertificateMetadataRule(chain []*x509.Certificate, logger logger
 				return nil
 			}
 		}
-		logger.Warn("invalid-subject", zap.String("issuer", cert.Issuer.String()), zap.String("subject", cert.Subject.String()), zap.Object("allowed", rule.ValidSubjects))
+		logger.Warn("invalid-subject", zap.String("issuer", cert.Issuer.String()), zap.String("subject", cert.Subject.String()), zap.Any("allowed", rule.ValidSubjects))
 		return fmt.Errorf("subject not in the list of allowed subjects for CA Subject %q: %q", rule.CASubject, subject)
 	}
 	// this should never happen as the function is only called on successful client certificate verification as callback

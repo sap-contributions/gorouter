@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/uber-go/zap"
+	"go.uber.org/zap"
 
 	"code.cloudfoundry.org/gorouter/config"
 	"code.cloudfoundry.org/gorouter/logger"
@@ -375,8 +375,8 @@ func (r *RouteRegistry) pruneStaleDroplets() {
 			}
 			r.logger.Info("pruned-route",
 				zap.String("uri", t.ToPath()),
-				zap.Object("endpoints", addresses),
-				zap.Object("isolation_segment", isolationSegment),
+				zap.Any("endpoints", addresses),
+				zap.Any("isolation_segment", isolationSegment),
 			)
 			r.reporter.CaptureRoutesPruned(uint64(len(endpoints)))
 		}
@@ -426,7 +426,7 @@ func zapData(uri route.Uri, endpoint *route.Endpoint) []zap.Field {
 		zap.String("instance_id", endpoint.PrivateInstanceId),
 		zap.String("server_cert_domain_san", endpoint.ServerCertDomainSAN),
 		zap.String("protocol", endpoint.Protocol),
-		zap.Object("modification_tag", endpoint.ModificationTag),
+		zap.Any("modification_tag", endpoint.ModificationTag),
 		isoSegField,
 		zap.Bool("isTLS", endpoint.IsTLS()),
 	}

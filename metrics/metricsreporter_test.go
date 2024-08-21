@@ -12,7 +12,7 @@ import (
 
 	"code.cloudfoundry.org/gorouter/handlers"
 	"code.cloudfoundry.org/gorouter/logger"
-	"github.com/uber-go/zap"
+	"go.uber.org/zap"
 
 	"code.cloudfoundry.org/gorouter/config"
 

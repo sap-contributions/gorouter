@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/uber-go/zap"
+	"go.uber.org/zap"
 
 	"code.cloudfoundry.org/gorouter/config"
 	"code.cloudfoundry.org/gorouter/handlers"
@@ -183,7 +183,7 @@ func (rt *roundTripper) RoundTrip(originalRequest *http.Request) (*http.Response
 				logger.Error("select-endpoint-failed", zap.String("host", reqInfo.RoutePool.Host()), zap.Error(selectEndpointErr))
 				break
 			}
-			logger = logger.With(zap.Nest("route-endpoint", endpoint.ToLogData()...))
+			logger = logger.With(zap.Any("route-endpoint", endpoint.ToLogData()))
 			reqInfo.RouteEndpoint = endpoint
 
 			logger.Debug("backend", zap.Int("attempt", attempt))
@@ -224,7 +224,7 @@ func (rt *roundTripper) RoundTrip(originalRequest *http.Request) (*http.Response
 		} else {
 			logger.Debug(
 				"route-service",
-				zap.Object("route-service-url", reqInfo.RouteServiceURL),
+				zap.Any("route-service-url", reqInfo.RouteServiceURL),
 				zap.Int("attempt", attempt),
 			)
 

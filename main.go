@@ -6,21 +6,37 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"runtime"
 	"syscall"
 	"time"
 
+	"go.uber.org/zap/zapcore"
+
+	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+
 	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/debugserver"
 	mr "code.cloudfoundry.org/go-metric-registry"
+	"code.cloudfoundry.org/lager/v3"
+	"code.cloudfoundry.org/tlsconfig"
+	"github.com/cloudfoundry/dropsonde"
+	"github.com/cloudfoundry/dropsonde/metric_sender"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/nats-io/nats.go"
+	"github.com/tedsuo/ifrit"
+	"github.com/tedsuo/ifrit/grouper"
+	"github.com/tedsuo/ifrit/sigmon"
+	"go.uber.org/zap"
+	"go.uber.org/zap/exp/zapslog"
+
 	"code.cloudfoundry.org/gorouter/accesslog"
 	"code.cloudfoundry.org/gorouter/common/health"
 	"code.cloudfoundry.org/gorouter/common/schema"
 	"code.cloudfoundry.org/gorouter/common/secure"
 	"code.cloudfoundry.org/gorouter/config"
 	"code.cloudfoundry.org/gorouter/errorwriter"
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/mbus"
 	"code.cloudfoundry.org/gorouter/metrics"
 	"code.cloudfoundry.org/gorouter/metrics/monitor"
@@ -30,18 +46,8 @@ import (
 	"code.cloudfoundry.org/gorouter/router"
 	"code.cloudfoundry.org/gorouter/routeservice"
 	rvarz "code.cloudfoundry.org/gorouter/varz"
-	"code.cloudfoundry.org/lager/v3"
 	routing_api "code.cloudfoundry.org/routing-api"
 	"code.cloudfoundry.org/routing-api/uaaclient"
-	"code.cloudfoundry.org/tlsconfig"
-	"github.com/cloudfoundry/dropsonde"
-	"github.com/cloudfoundry/dropsonde/metric_sender"
-	"github.com/cloudfoundry/dropsonde/metricbatcher"
-	"github.com/nats-io/nats.go"
-	"github.com/tedsuo/ifrit"
-	"github.com/tedsuo/ifrit/grouper"
-	"github.com/tedsuo/ifrit/sigmon"
-	"github.com/uber-go/zap"
 )
 
 var (
@@ -93,8 +99,8 @@ func main() {
 	}
 
 	logger.Info("retrieved-isolation-segments",
-		zap.Object("isolation_segments", c.IsolationSegments),
-		zap.Object("routing_table_sharding_mode", c.RoutingTableShardingMode),
+		zap.Any("isolation_segments", c.IsolationSegments),
+		zap.Any("routing_table_sharding_mode", c.RoutingTableShardingMode),
 	)
 
 	// setup number of procs
@@ -405,7 +411,7 @@ func setupRouteFetcher(logger goRouterLogger.Logger, c *config.Config, registry 
 }
 
 func createLogger(component string, level string, timestampFormat string) (goRouterLogger.Logger, lager.LogLevel) {
-	var logLevel zap.Level
+	var logLevel zapcore.Level
 	logLevel.UnmarshalText([]byte(level))
 
 	var minLagerLogLevel lager.LogLevel
@@ -422,6 +428,49 @@ func createLogger(component string, level string, timestampFormat string) (goRou
 		panic(fmt.Errorf("unknown log level: %s", level))
 	}
 
-	lggr := goRouterLogger.NewLogger(component, timestampFormat, logLevel, zap.Output(os.Stdout))
+	lggr := goRouterLogger.NewLogger(component, timestampFormat, logLevel, zapcore.NewMultiWriteSyncer(os.Stdout))
 	return lggr, minLagerLogLevel
+}
+
+func createNewLogger(component string, level string, timestampFormat string) (*slog.Logger, slog.Level) {
+	var logLevel slog.Level
+	logLevel.UnmarshalText([]byte(level))
+	//opts := slog.HandlerOptions{
+	//	Level: logLevel,
+	//}
+	//
+	//lggr := slog.New(zapslog.NewHandler(zap.L().Core(), &zapslog.HandlerOptions{
+	//	LoggerName: "",
+	//	AddSource:  false,
+	//}))
+
+	zapConfig := zapcore.EncoderConfig{
+		MessageKey:    "msg",
+		LevelKey:      "log_level",
+		EncodeLevel:   zapcore.LowercaseLevelEncoder,
+		TimeKey:       "ts",
+		EncodeTime:    zapcore.RFC3339TimeEncoder,
+		CallerKey:     "caller",
+		EncodeCaller:  zapcore.ShortCallerEncoder,
+		StacktraceKey: "stack_trace",
+	}
+
+	zapLevel, err := zapcore.ParseLevel(level)
+	if err != nil {
+		panic(fmt.Errorf("unknown log level: %s", level))
+	}
+
+	core := zapcore.NewCore(
+		zapcore.NewJSONEncoder(zapConfig),
+		zapcore.Lock(os.Stdout),
+		zapLevel,
+	)
+	zapInstance := zap.New(core,
+		zap.AddCaller(),
+		zap.AddStacktrace(zapcore.ErrorLevel),
+	)
+	slogInstance := slog.New(zapslog.NewHandler(zapInstance.Core(), &zapslog.HandlerOptions{AddSource: true}))
+	slog.SetDefault(slogInstance)
+	slog.SetLogLoggerLevel(logLevel)
+	return slogInstance, logLevel
 }

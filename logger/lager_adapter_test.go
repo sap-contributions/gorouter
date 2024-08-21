@@ -5,13 +5,7 @@ import (
 	"net/http"
 
 	"code.cloudfoundry.org/gorouter/logger/fakes"
-	"code.cloudfoundry.org/lager/v3"
-
-	. "code.cloudfoundry.org/gorouter/logger"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	"github.com/uber-go/zap"
+	"go.uber.org/zap"
 )
 
 var _ = Describe("LagerAdapter", func() {

@@ -16,7 +16,7 @@ import (
 	"code.cloudfoundry.org/routing-api/models"
 	"code.cloudfoundry.org/routing-api/uaaclient"
 	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/uber-go/zap"
+	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 )
 
@@ -159,7 +159,7 @@ func (r *RouteFetcher) subscribeToEvents(token *oauth2.Token) error {
 			}
 			break
 		}
-		r.logger.Debug("received-event", zap.Object("event", event))
+		r.logger.Debug("received-event", zap.Any("event", event))
 		r.eventChannel <- event
 	}
 	return err

@@ -2,6 +2,7 @@ package mbus
 
 import (
 	"errors"
+	"github.com/nats-io/nats.go"
 	"net/url"
 	"sync/atomic"
 	"time"
@@ -9,8 +10,7 @@ import (
 	"code.cloudfoundry.org/gorouter/config"
 	"code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/tlsconfig"
-	"github.com/nats-io/nats.go"
-	"github.com/uber-go/zap"
+	"go.uber.org/zap"
 )
 
 type Signal struct{}
@@ -69,7 +69,7 @@ func natsOptions(l logger.Logger, c *config.Config, natsHost *atomic.Value, nats
 			tlsconfig.WithAuthority(c.Nats.CAPool),
 		)
 		if err != nil {
-			l.Fatal("nats-tls-config-invalid", zap.Object("error", err))
+			l.Fatal("nats-tls-config-invalid", zap.Any("error", err))
 		}
 	}
 	options.PingInterval = c.NatsClientPingInterval
@@ -80,7 +80,7 @@ func natsOptions(l logger.Logger, c *config.Config, natsHost *atomic.Value, nats
 		l.Fatal(
 			"nats-connection-closed",
 			zap.Error(errors.New("unexpected close")),
-			zap.Object("last_error", conn.LastError()),
+			zap.Any("last_error", conn.LastError()),
 		)
 	}
 

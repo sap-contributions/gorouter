@@ -16,9 +16,8 @@ import (
 	"code.cloudfoundry.org/gorouter/route"
 	"code.cloudfoundry.org/localip"
 	"code.cloudfoundry.org/routing-api/models"
-
 	"github.com/nats-io/nats.go"
-	"github.com/uber-go/zap"
+	"go.uber.org/zap"
 )
 
 type RegistryMessage struct {
@@ -243,7 +242,7 @@ func (s *Subscriber) registerEndpoint(msg *RegistryMessage) {
 	if err != nil {
 		s.logger.Error("Unable to register route",
 			zap.Error(err),
-			zap.Object("message", msg),
+			zap.Any("message", msg),
 		)
 		return
 	}
@@ -258,7 +257,7 @@ func (s *Subscriber) unregisterEndpoint(msg *RegistryMessage) {
 	if err != nil {
 		s.logger.Error("Unable to unregister route",
 			zap.Error(err),
-			zap.Object("message", msg),
+			zap.Any("message", msg),
 		)
 		return
 	}

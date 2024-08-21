@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/urfave/negroni/v3"
+
 	router_http "code.cloudfoundry.org/gorouter/common/http"
 
 	"code.cloudfoundry.org/gorouter/common/health"
 
+	"go.uber.org/zap"
+
 	"code.cloudfoundry.org/gorouter/logger"
-	"github.com/uber-go/zap"
-	"github.com/urfave/negroni/v3"
 )
 
 type panicCheck struct {
@@ -41,7 +43,7 @@ func (p *panicCheck) ServeHTTP(rw http.ResponseWriter, r *http.Request, next htt
 					err = fmt.Errorf("%v", rec)
 				}
 				logger := LoggerWithTraceInfo(p.logger, r)
-				logger.Error("panic-check", zap.String("host", r.Host), zap.Nest("error", zap.Error(err), zap.Stack()))
+				logger.Error("panic-check", zap.String("host", r.Host), zap.Any("error", zap.Error(err)))
 
 				rw.Header().Set(router_http.CfRouterError, "unknown_failure")
 				rw.WriteHeader(http.StatusBadGateway)

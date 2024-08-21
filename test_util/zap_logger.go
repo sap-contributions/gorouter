@@ -8,12 +8,12 @@ import (
 	"code.cloudfoundry.org/gorouter/logger"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega/gbytes"
-	"github.com/uber-go/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // We add 1 to zap's default values to match our level definitions
 // https://github.com/uber-go/zap/blob/47f41350ff078ea1415b63c117bf1475b7bbe72c/level.go#L36
-func levelNumber(level zap.Level) int {
+func levelNumber(level zapcore.Level) int {
 	return int(level) + 1
 }
 
@@ -33,12 +33,12 @@ func NewTestZapLogger(component string) *TestZapLogger {
 	sink := &TestZapSink{
 		Buffer: gbytes.NewBuffer(),
 	}
+
 	testLogger := logger.NewLogger(
 		component,
 		"unix-epoch",
-		zap.DebugLevel,
-		zap.Output(zap.MultiWriteSyncer(sink, zap.AddSync(ginkgo.GinkgoWriter))),
-		zap.ErrorOutput(zap.MultiWriteSyncer(sink, zap.AddSync(ginkgo.GinkgoWriter))),
+		zapcore.DebugLevel,
+		zapcore.NewMultiWriteSyncer(sink, zapcore.AddSync(ginkgo.GinkgoWriter)),
 	)
 	return &TestZapLogger{
 		Logger:      testLogger,
@@ -60,7 +60,7 @@ func (z *TestZapLogger) Buffer() *gbytes.Buffer {
 	return z.TestZapSink.Buffer
 }
 
-func (z *TestZapLogger) Lines(level zap.Level) []string {
+func (z *TestZapLogger) Lines(level zapcore.Level) []string {
 	r, _ := regexp.Compile(fmt.Sprintf(".*\"log_level\":%d.*}\n", levelNumber(level)))
 	return r.FindAllString(string(z.TestZapSink.Buffer.Contents()), -1)
 }

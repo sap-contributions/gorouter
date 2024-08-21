@@ -1,9 +1,11 @@
 package logger
 
 import (
-	"time"
+	"strconv"
 
-	"github.com/uber-go/zap"
+	"go.uber.org/zap/zapcore"
+
+	"go.uber.org/zap"
 )
 
 // Logger is the zap.Logger interface with additional Session methods.
@@ -11,8 +13,6 @@ import (
 //go:generate counterfeiter -o fakes/fake_logger.go . Logger
 type Logger interface {
 	With(...zap.Field) Logger
-	Check(zap.Level, string) *zap.CheckedMessage
-	Log(zap.Level, string, ...zap.Field)
 	Debug(string, ...zap.Field)
 	Info(string, ...zap.Field)
 	Warn(string, ...zap.Field)
@@ -31,36 +31,33 @@ type logger struct {
 	zap.Logger
 }
 
-func RFC3339Formatter(key string) zap.TimeFormatter {
-	return func(t time.Time) zap.Field {
-		return zap.String(key, t.Format("2006-01-02T15:04:05.000000000Z"))
-	}
-}
-
-func UnixEpochFormatter(key string) zap.TimeFormatter {
-	return zap.EpochFormatter(key)
-}
-
 // NewLogger returns a new zap logger that implements the Logger interface.
-func NewLogger(component string, timestampFormat string, options ...zap.Option) Logger {
-	formatter := UnixEpochFormatter("timestamp")
+func NewLogger(component string, timestampFormat string, logLevel zapcore.Level, writeSyncer zapcore.WriteSyncer) Logger {
+	formatter := zapcore.RFC3339NanoTimeEncoder
 
 	if timestampFormat == "rfc3339" {
-		formatter = RFC3339Formatter("timestamp")
+		formatter = zapcore.RFC3339TimeEncoder
 	}
 
-	enc := zap.NewJSONEncoder(
-		zap.LevelString("log_level"),
-		zap.MessageKey("message"),
-		formatter,
-		numberLevelFormatter(),
-	)
-	origLogger := zap.New(enc, options...)
+	conf := zapcore.EncoderConfig{
+		MessageKey:  "message",
+		LevelKey:    "log_level",
+		EncodeLevel: numberLevelFormatter,
+		EncodeTime:  formatter,
+	}
+
+	core := zapcore.NewCore(zapcore.NewJSONEncoder(conf), writeSyncer, logLevel)
+
+	origLogger := zap.New(core)
 
 	return &logger{
 		source:     component,
-		origLogger: origLogger,
-		Logger:     origLogger.With(zap.String("source", component)),
+		origLogger: *origLogger,
+		Logger: *zap.New(zapcore.NewLazyWith(origLogger.Core(), []zapcore.Field{{
+			Key:    "source",
+			String: component,
+			Type:   zapcore.StringType,
+		}})),
 	}
 }
 
@@ -69,19 +66,18 @@ func (l *logger) Session(component string) Logger {
 	lggr := &logger{
 		source:     newSource,
 		origLogger: l.origLogger,
-		Logger:     l.origLogger.With(zap.String("source", newSource)),
-		context:    l.context,
+		Logger: *zap.New(zapcore.NewLazyWith(l.origLogger.Core(), []zapcore.Field{{
+			Key:    "source",
+			String: newSource,
+			Type:   zapcore.StringType,
+		}})),
+		context: l.context,
 	}
 	return lggr
 }
 
 func (l *logger) SessionName() string {
 	return l.source
-}
-
-func (l *logger) wrapDataFields(fields ...zap.Field) zap.Field {
-	finalFields := append(l.context, fields...)
-	return zap.Nest("data", finalFields...)
 }
 
 func (l *logger) With(fields ...zap.Field) Logger {
@@ -93,39 +89,31 @@ func (l *logger) With(fields ...zap.Field) Logger {
 	}
 }
 
-func (l *logger) Log(level zap.Level, msg string, fields ...zap.Field) {
-	l.Logger.Log(level, msg, l.wrapDataFields(fields...))
-}
 func (l *logger) Debug(msg string, fields ...zap.Field) {
-	l.Log(zap.DebugLevel, msg, fields...)
+	l.Logger.Debug(msg, fields...)
 }
 func (l *logger) Info(msg string, fields ...zap.Field) {
-	l.Log(zap.InfoLevel, msg, fields...)
+	l.Logger.Info(msg, fields...)
 }
 func (l *logger) Warn(msg string, fields ...zap.Field) {
-	l.Log(zap.WarnLevel, msg, fields...)
+	l.Logger.Warn(msg, fields...)
 }
 func (l *logger) Error(msg string, fields ...zap.Field) {
-	l.Log(zap.ErrorLevel, msg, fields...)
-}
-func (l *logger) DPanic(msg string, fields ...zap.Field) {
-	l.Logger.DPanic(msg, l.wrapDataFields(fields...))
+	l.Logger.Error(msg, fields...)
 }
 func (l *logger) Panic(msg string, fields ...zap.Field) {
-	l.Logger.Panic(msg, l.wrapDataFields(fields...))
+	l.Logger.Panic(msg, fields...)
 }
 func (l *logger) Fatal(msg string, fields ...zap.Field) {
-	l.Logger.Fatal(msg, l.wrapDataFields(fields...))
+	l.Logger.Fatal(msg, fields...)
 }
 
-func numberLevelFormatter() zap.LevelFormatter {
-	return zap.LevelFormatter(func(level zap.Level) zap.Field {
-		return zap.Int("log_level", levelNumber(level))
-	})
+func numberLevelFormatter(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
+	enc.AppendString(strconv.Itoa(levelNumber(level)))
 }
 
 // We add 1 to zap's default values to match our level definitions
 // https://github.com/uber-go/zap/blob/47f41350ff078ea1415b63c117bf1475b7bbe72c/level.go#L36
-func levelNumber(level zap.Level) int {
+func levelNumber(level zapcore.Level) int {
 	return int(level) + 1
 }

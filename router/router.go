@@ -26,7 +26,7 @@ import (
 	"code.cloudfoundry.org/gorouter/varz"
 	"github.com/armon/go-proxyproto"
 	"github.com/nats-io/nats.go"
-	"github.com/uber-go/zap"
+	"go.uber.org/zap"
 )
 
 var DrainTimeout = errors.New("router: Drain timeout")
@@ -321,7 +321,7 @@ func (r *Router) serveHTTPS(server *http.Server, errChan chan error) error {
 
 	r.tlsListener = tls.NewListener(listener, tlsConfig)
 
-	r.logger.Info("tls-listener-started", zap.Object("address", r.tlsListener.Addr()))
+	r.logger.Info("tls-listener-started", zap.Any("address", r.tlsListener.Addr()))
 
 	go func() {
 		err := server.Serve(r.tlsListener)
@@ -365,7 +365,7 @@ func (r *Router) serveHTTP(server *http.Server, errChan chan error) error {
 		}
 	}
 
-	r.logger.Info("tcp-listener-started", zap.Object("address", r.listener.Addr()))
+	r.logger.Info("tcp-listener-started", zap.Any("address", r.listener.Addr()))
 
 	go func() {
 		err := server.Serve(r.listener)
