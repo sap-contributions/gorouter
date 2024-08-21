@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"runtime"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -60,20 +61,20 @@ func main() {
 	flag.Parse()
 
 	prefix := "gorouter.stdout"
-	tmpLogger, _ := createLogger(prefix, "INFO", "unix-epoch")
+	tmpLogger, _ := createNewLogger(prefix, "INFO", "unix-epoch")
 
 	c, err := config.DefaultConfig()
 	if err != nil {
-		tmpLogger.Fatal("Error loading config:", zap.Error(err))
+		tmpLogger.Error("Error loading config:", zap.Error(err))
 	}
 
 	if configFile != "" {
 		c, err = config.InitConfigFromFile(configFile)
 		if err != nil {
-			tmpLogger.Fatal("Error loading config:", zap.Error(err))
+			tmpLogger.Error("Error loading config:", zap.Error(err))
 		}
 	}
-
+	tmpLogger.Info("Shit works")
 	logCounter := schema.NewLogCounter()
 
 	if c.Logging.Syslog != "" {
@@ -435,6 +436,12 @@ func createLogger(component string, level string, timestampFormat string) (goRou
 func createNewLogger(component string, level string, timestampFormat string) (*slog.Logger, slog.Level) {
 	var logLevel slog.Level
 	logLevel.UnmarshalText([]byte(level))
+
+	formatter := zapcore.RFC3339NanoTimeEncoder
+
+	if timestampFormat == "rfc3339" {
+		formatter = zapcore.RFC3339TimeEncoder
+	}
 	//opts := slog.HandlerOptions{
 	//	Level: logLevel,
 	//}
@@ -447,10 +454,9 @@ func createNewLogger(component string, level string, timestampFormat string) (*s
 	zapConfig := zapcore.EncoderConfig{
 		MessageKey:    "msg",
 		LevelKey:      "log_level",
-		EncodeLevel:   zapcore.LowercaseLevelEncoder,
+		EncodeLevel:   numberLevelFormatter,
 		TimeKey:       "ts",
-		EncodeTime:    zapcore.RFC3339TimeEncoder,
-		CallerKey:     "caller",
+		EncodeTime:    formatter,
 		EncodeCaller:  zapcore.ShortCallerEncoder,
 		StacktraceKey: "stack_trace",
 	}
@@ -465,12 +471,52 @@ func createNewLogger(component string, level string, timestampFormat string) (*s
 		zapcore.Lock(os.Stdout),
 		zapLevel,
 	)
-	zapInstance := zap.New(core,
-		zap.AddCaller(),
+
+	//zapInstance := zap.New(
+	//	zapcore.NewLazyWith(
+	//		core,
+	//		[]zapcore.Field{{
+	//			Key:    "source",
+	//			String: component,
+	//			Type:   zapcore.StringType,
+	//		}},
+	//	),
+	//	zap.AddStacktrace(zapcore.ErrorLevel),
+	//	zap.AddCaller(),
+	//)
+
+	zapInstance2 := zap.New(
+		core,
 		zap.AddStacktrace(zapcore.ErrorLevel),
-	)
-	slogInstance := slog.New(zapslog.NewHandler(zapInstance.Core(), &zapslog.HandlerOptions{AddSource: true}))
+		zap.AddCaller(),
+	).With(zapcore.Field{
+		Key:    "source",
+		String: component,
+		Type:   zapcore.StringType,
+	})
+
+	//			zap.New(zapcore.NewLazyWith(core, []zapcore.Field{{
+	//	Key:    "source",
+	//	String: component,
+	//	Type:   zapcore.StringType,
+	//}})),
+
+	//zapInstance := zap.New(core,
+	//	zap.AddCaller(),
+	//	zap.AddStacktrace(zapcore.ErrorLevel),
+	//)
+	slogInstance := slog.New(zapslog.NewHandler(zapInstance2.Core(), &zapslog.HandlerOptions{AddSource: true}))
 	slog.SetDefault(slogInstance)
 	slog.SetLogLoggerLevel(logLevel)
 	return slogInstance, logLevel
+}
+
+func numberLevelFormatter(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
+	enc.AppendString(strconv.Itoa(levelNumber(level)))
+}
+
+// We add 1 to zap's default values to match our level definitions
+// https://github.com/uber-go/zap/blob/47f41350ff078ea1415b63c117bf1475b7bbe72c/level.go#L36
+func levelNumber(level zapcore.Level) int {
+	return int(level) + 1
 }

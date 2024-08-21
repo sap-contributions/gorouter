@@ -42,6 +42,7 @@ func NewLogger(component string, timestampFormat string, logLevel zapcore.Level,
 	conf := zapcore.EncoderConfig{
 		MessageKey:  "message",
 		LevelKey:    "log_level",
+		TimeKey:     "ts",
 		EncodeLevel: numberLevelFormatter,
 		EncodeTime:  formatter,
 	}
@@ -53,11 +54,11 @@ func NewLogger(component string, timestampFormat string, logLevel zapcore.Level,
 	return &logger{
 		source:     component,
 		origLogger: *origLogger,
-		Logger: *zap.New(zapcore.NewLazyWith(origLogger.Core(), []zapcore.Field{{
+		Logger: *zap.New(origLogger.Core()).With(zapcore.Field{
 			Key:    "source",
 			String: component,
 			Type:   zapcore.StringType,
-		}})),
+		}),
 	}
 }
 
@@ -66,11 +67,11 @@ func (l *logger) Session(component string) Logger {
 	lggr := &logger{
 		source:     newSource,
 		origLogger: l.origLogger,
-		Logger: *zap.New(zapcore.NewLazyWith(l.origLogger.Core(), []zapcore.Field{{
+		Logger: *zap.New(l.origLogger.Core()).With(zapcore.Field{
 			Key:    "source",
 			String: newSource,
 			Type:   zapcore.StringType,
-		}})),
+		}),
 		context: l.context,
 	}
 	return lggr
