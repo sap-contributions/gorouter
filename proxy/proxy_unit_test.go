@@ -10,10 +10,13 @@ import (
 
 	"code.cloudfoundry.org/gorouter/common/health"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gbytes"
+
 	fakelogger "code.cloudfoundry.org/gorouter/accesslog/fakes"
 	"code.cloudfoundry.org/gorouter/errorwriter"
 	sharedfakes "code.cloudfoundry.org/gorouter/fakes"
-	"code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/metrics"
 	"code.cloudfoundry.org/gorouter/metrics/fakes"
 	"code.cloudfoundry.org/gorouter/proxy"
@@ -23,9 +26,6 @@ import (
 	"code.cloudfoundry.org/gorouter/route"
 	"code.cloudfoundry.org/gorouter/routeservice"
 	"code.cloudfoundry.org/gorouter/test_util"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gbytes"
 )
 
 var _ = Describe("Proxy Unit tests", func() {
@@ -293,7 +293,7 @@ type returns struct {
 	Error error
 }
 
-func (h *hasBeenToRouteServiceValidatorFake) ArrivedViaRouteService(req *http.Request, logger logger.Logger) (bool, error) {
+func (h *hasBeenToRouteServiceValidatorFake) ArrivedViaRouteService(req *http.Request, logger *slog.Logger) (bool, error) {
 	return h.ValidatedHasBeenToRouteServiceCall.Returns.Value, h.ValidatedHasBeenToRouteServiceCall.Returns.Error
 }
 

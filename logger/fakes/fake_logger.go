@@ -4,7 +4,7 @@ package fakes
 import (
 	"sync"
 
-	"code.cloudfoundry.org/gorouter/logger"
+	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 	"go.uber.org/zap"
 )
 

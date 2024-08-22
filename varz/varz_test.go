@@ -1,15 +1,15 @@
 package varz_test
 
 import (
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
 	"code.cloudfoundry.org/gorouter/config"
-	"code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/metrics/fakes"
 	"code.cloudfoundry.org/gorouter/registry"
 	"code.cloudfoundry.org/gorouter/route"
 	"code.cloudfoundry.org/gorouter/test_util"
 	. "code.cloudfoundry.org/gorouter/varz"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 
 	"encoding/json"
 	"fmt"
@@ -20,7 +20,7 @@ import (
 var _ = Describe("Varz", func() {
 	var Varz Varz
 	var Registry *registry.RouteRegistry
-	var logger logger.Logger
+	var logger *slog.Logger
 
 	BeforeEach(func() {
 		logger = test_util.NewTestZapLogger("test")

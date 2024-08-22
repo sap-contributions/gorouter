@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/urfave/negroni/v3"
@@ -12,16 +13,16 @@ import (
 
 	"go.uber.org/zap"
 
-	"code.cloudfoundry.org/gorouter/logger"
+	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 )
 
 type panicCheck struct {
 	health *health.Health
-	logger logger.Logger
+	logger *slog.Logger
 }
 
 // NewPanicCheck creates a handler responsible for checking for panics and setting the Healthcheck to fail.
-func NewPanicCheck(health *health.Health, logger logger.Logger) negroni.Handler {
+func NewPanicCheck(health *health.Health, logger *slog.Logger) negroni.Handler {
 	return &panicCheck{
 		health: health,
 		logger: logger,
@@ -43,7 +44,7 @@ func (p *panicCheck) ServeHTTP(rw http.ResponseWriter, r *http.Request, next htt
 					err = fmt.Errorf("%v", rec)
 				}
 				logger := LoggerWithTraceInfo(p.logger, r)
-				logger.Error("panic-check", zap.String("host", r.Host), zap.Any("error", zap.Error(err)))
+				logger.Error("panic-check", slog.String("host", r.Host), zap.Any("error", goRouterLogger.ErrAttr(err)))
 
 				rw.Header().Set(router_http.CfRouterError, "unknown_failure")
 				rw.WriteHeader(http.StatusBadGateway)

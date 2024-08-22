@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"code.cloudfoundry.org/gorouter/logger/fakes"
-	"go.uber.org/zap"
 )
 
 var _ = Describe("LagerAdapter", func() {
@@ -43,7 +42,7 @@ var _ = Describe("LagerAdapter", func() {
 				Expect(zapLogger.WithCallCount()).To(Equal(1))
 				fields := zapLogger.WithArgsForCall(0)
 				Expect(fields).To(HaveLen(2))
-				Expect(fields).To(ConsistOf(zap.String("foo", "bar"), zap.String("bar", "baz")))
+				Expect(fields).To(ConsistOf(slog.String("foo", "bar"), slog.String("bar", "baz")))
 			})
 		})
 	})
@@ -94,7 +93,7 @@ var _ = Describe("LagerAdapter", func() {
 				message, fields := zapLogger.DebugArgsForCall(0)
 				Expect(message).To(Equal(debugMessage))
 				Expect(fields).To(HaveLen(2))
-				Expect(fields).To(ConsistOf(zap.String("foo", "bar"), zap.String("bar", "baz")))
+				Expect(fields).To(ConsistOf(slog.String("foo", "bar"), slog.String("bar", "baz")))
 			})
 		})
 	})
@@ -122,7 +121,7 @@ var _ = Describe("LagerAdapter", func() {
 				message, fields := zapLogger.InfoArgsForCall(0)
 				Expect(message).To(Equal(infoMessage))
 				Expect(fields).To(HaveLen(2))
-				Expect(fields).To(ConsistOf(zap.String("foo", "bar"), zap.String("bar", "baz")))
+				Expect(fields).To(ConsistOf(slog.String("foo", "bar"), slog.String("bar", "baz")))
 			})
 		})
 	})
@@ -143,7 +142,7 @@ var _ = Describe("LagerAdapter", func() {
 				message, fields := zapLogger.ErrorArgsForCall(0)
 				Expect(message).To(Equal(errorMessage))
 				Expect(fields).To(HaveLen(1))
-				Expect(fields[0]).To(Equal(zap.Error(err)))
+				Expect(fields[0]).To(Equal(goRouterLogger.ErrAttr(err)))
 			})
 		})
 
@@ -158,9 +157,9 @@ var _ = Describe("LagerAdapter", func() {
 				Expect(message).To(Equal(errorMessage))
 				Expect(fields).To(HaveLen(3))
 				Expect(fields).To(ConsistOf(
-					zap.Error(err),
-					zap.String("foo", "bar"),
-					zap.String("bar", "baz"),
+					goRouterLogger.ErrAttr(err),
+					slog.String("foo", "bar"),
+					slog.String("bar", "baz"),
 				))
 			})
 		})
@@ -182,7 +181,7 @@ var _ = Describe("LagerAdapter", func() {
 				message, fields := zapLogger.FatalArgsForCall(0)
 				Expect(message).To(Equal(errorMessage))
 				Expect(fields).To(HaveLen(1))
-				Expect(fields[0]).To(Equal(zap.Error(err)))
+				Expect(fields[0]).To(Equal(goRouterLogger.ErrAttr(err)))
 			})
 		})
 
@@ -197,9 +196,9 @@ var _ = Describe("LagerAdapter", func() {
 				Expect(message).To(Equal(errorMessage))
 				Expect(fields).To(HaveLen(3))
 				Expect(fields).To(ConsistOf(
-					zap.Error(err),
-					zap.String("foo", "bar"),
-					zap.String("bar", "baz"),
+					goRouterLogger.ErrAttr(err),
+					slog.String("foo", "bar"),
+					slog.String("bar", "baz"),
 				))
 			})
 		})
@@ -213,7 +212,7 @@ var _ = Describe("LagerAdapter", func() {
 			Expect(zapLogger.WithCallCount()).To(Equal(1))
 			zapFields := zapLogger.WithArgsForCall(0)
 			Expect(zapFields).To(HaveLen(2))
-			Expect(zapFields).To(ConsistOf(zap.String("foo", "bar"), zap.String("bar", "baz")))
+			Expect(zapFields).To(ConsistOf(slog.String("foo", "bar"), slog.String("bar", "baz")))
 		})
 	})
 
@@ -246,8 +245,8 @@ var _ = Describe("LagerAdapter", func() {
 
 				zapFields := zapLogger.WithArgsForCall(0)
 				Expect(zapFields).To(HaveLen(2))
-				Expect(zapFields).To(ContainElement(zap.String("trace-id", "7f46165474d11ee5836777d85df2cdab")))
-				Expect(zapFields).To(ContainElement(zap.String("span-id", "836777d85df2cdab")))
+				Expect(zapFields).To(ContainElement(slog.String("trace-id", "7f46165474d11ee5836777d85df2cdab")))
+				Expect(zapFields).To(ContainElement(slog.String("span-id", "836777d85df2cdab")))
 
 			})
 		})

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/gorouter/handlers"
-	"code.cloudfoundry.org/gorouter/logger"
+	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/test_util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -19,7 +19,7 @@ const UUIDRegex = "^(urn\\:uuid\\:)?\\{?([a-z0-9]{8})-([a-z0-9]{4})-([1-5][a-z0-
 
 var _ = Describe("Set Vcap Request Id header", func() {
 	var (
-		logger          logger.Logger
+		logger          *slog.Logger
 		nextCalled      bool
 		resp            *httptest.ResponseRecorder
 		req             *http.Request

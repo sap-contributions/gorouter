@@ -1,22 +1,22 @@
 package handlers
 
 import (
+	"log/slog"
 	"net/http"
 
-	"code.cloudfoundry.org/gorouter/logger"
 	"github.com/urfave/negroni/v3"
-	"go.uber.org/zap"
 
+	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/proxy/utils"
 )
 
 type proxyWriterHandler struct {
-	logger logger.Logger
+	logger *slog.Logger
 }
 
 // NewProxyWriter creates a handler responsible for setting a proxy
 // responseWriter on the request and response
-func NewProxyWriter(logger logger.Logger) negroni.Handler {
+func NewProxyWriter(logger *slog.Logger) negroni.Handler {
 	return &proxyWriterHandler{
 		logger: logger,
 	}
@@ -26,7 +26,7 @@ func NewProxyWriter(logger logger.Logger) negroni.Handler {
 func (p *proxyWriterHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	reqInfo, err := ContextRequestInfo(r)
 	if err != nil {
-		p.logger.Panic("request-info-err", zap.Error(err))
+		p.logger.Error("request-info-err", goRouterLogger.ErrAttr(err))
 		return
 	}
 	proxyWriter := utils.NewProxyResponseWriter(rw)

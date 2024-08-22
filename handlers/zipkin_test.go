@@ -8,7 +8,7 @@ import (
 	"code.cloudfoundry.org/gorouter/handlers"
 	"code.cloudfoundry.org/gorouter/test_util"
 
-	"code.cloudfoundry.org/gorouter/logger"
+	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/openzipkin/zipkin-go/propagation/b3"
@@ -33,7 +33,7 @@ const (
 var _ = Describe("Zipkin", func() {
 	var (
 		handler    *handlers.Zipkin
-		logger     logger.Logger
+		logger     *slog.Logger
 		resp       http.ResponseWriter
 		req        *http.Request
 		nextCalled bool

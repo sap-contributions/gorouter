@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -15,18 +16,19 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/armon/go-proxyproto"
+	"github.com/nats-io/nats.go"
+	"go.uber.org/zap"
+
 	"code.cloudfoundry.org/gorouter/common"
 	"code.cloudfoundry.org/gorouter/common/health"
 	"code.cloudfoundry.org/gorouter/common/schema"
 	"code.cloudfoundry.org/gorouter/config"
 	"code.cloudfoundry.org/gorouter/handlers"
-	"code.cloudfoundry.org/gorouter/logger"
+	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/metrics/monitor"
 	"code.cloudfoundry.org/gorouter/registry"
 	"code.cloudfoundry.org/gorouter/varz"
-	"github.com/armon/go-proxyproto"
-	"github.com/nats-io/nats.go"
-	"go.uber.org/zap"
 )
 
 var DrainTimeout = errors.New("router: Drain timeout")
@@ -65,13 +67,13 @@ type Router struct {
 	stopLock            sync.Mutex
 	uptimeMonitor       *monitor.Uptime
 	health              *health.Health
-	logger              logger.Logger
+	logger              *slog.Logger
 	errChan             chan error
 	routeServicesServer rss
 }
 
 func NewRouter(
-	logger logger.Logger,
+	logger *slog.Logger,
 	cfg *config.Config,
 	handler http.Handler,
 	mbusClient *nats.Conn,
@@ -147,7 +149,7 @@ func NewRouter(
 				Port:        cfg.Status.Port,
 				HealthCheck: healthCheck,
 				Router:      router,
-				Logger:      logger.Session("nontls-health-listener"),
+				Logger:      logger.With("session", "nontls-health-listener"),
 			}
 			if err := router.healthListener.ListenAndServe(); err != nil {
 				return nil, err
@@ -166,7 +168,7 @@ func NewRouter(
 			},
 			HealthCheck: healthCheck,
 			Router:      router,
-			Logger:      logger.Session("tls-health-listener"),
+			Logger:      logger.With("session", "tls-health-listener"),
 		}
 		if cfg.EnableHTTP2 {
 			router.healthTLSListener.TLSConfig.NextProtos = []string{"h2", "http/1.1"}
@@ -242,7 +244,7 @@ func (r *Router) OnErrOrSignal(signals <-chan os.Signal, errChan chan error) {
 	select {
 	case err := <-errChan:
 		if err != nil {
-			r.logger.Error("Error occurred", zap.Error(err))
+			r.logger.Error("Error occurred", goRouterLogger.ErrAttr(err))
 			r.health.SetHealth(health.Degraded)
 		}
 	case sig := <-signals:
@@ -250,7 +252,7 @@ func (r *Router) OnErrOrSignal(signals <-chan os.Signal, errChan chan error) {
 			for sig := range signals {
 				r.logger.Info(
 					"gorouter.signal.ignored",
-					zap.String("signal", sig.String()),
+					slog.String("signal", sig.String()),
 				)
 			}
 		}()
@@ -308,7 +310,7 @@ func (r *Router) serveHTTPS(server *http.Server, errChan chan error) error {
 
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", r.config.SSLPort))
 	if err != nil {
-		r.logger.Fatal("tls-listener-error", zap.Error(err))
+		r.logger.Error("tls-listener-error", goRouterLogger.ErrAttr(err))
 		return err
 	}
 
@@ -353,7 +355,7 @@ func (r *Router) serveHTTP(server *http.Server, errChan chan error) error {
 
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", r.config.Port))
 	if err != nil {
-		r.logger.Fatal("tcp-listener-error", zap.Error(err))
+		r.logger.Error("tcp-listener-error", goRouterLogger.ErrAttr(err))
 		return err
 	}
 

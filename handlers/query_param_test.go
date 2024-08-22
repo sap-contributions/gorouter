@@ -9,7 +9,7 @@ import (
 	router_http "code.cloudfoundry.org/gorouter/common/http"
 	"code.cloudfoundry.org/gorouter/common/uuid"
 	"code.cloudfoundry.org/gorouter/handlers"
-	"code.cloudfoundry.org/gorouter/logger"
+	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/route"
 	"code.cloudfoundry.org/gorouter/test_util"
 
@@ -26,7 +26,7 @@ var _ = Describe("QueryParamHandler", func() {
 		resp http.ResponseWriter
 		req  *http.Request
 
-		logger logger.Logger
+		logger *slog.Logger
 
 		prevHandler negroni.Handler
 

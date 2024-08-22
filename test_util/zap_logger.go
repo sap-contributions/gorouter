@@ -2,13 +2,15 @@ package test_util
 
 import (
 	"fmt"
+	"log/slog"
 	"regexp"
 	"strings"
 
-	"code.cloudfoundry.org/gorouter/logger"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega/gbytes"
 	"go.uber.org/zap/zapcore"
+
+	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 )
 
 // We add 1 to zap's default values to match our level definitions
@@ -19,7 +21,7 @@ func levelNumber(level zapcore.Level) int {
 
 // TestZapLogger implements a zap logger that can be used with Ginkgo tests
 type TestZapLogger struct {
-	logger.Logger
+	*slog.Logger
 	*TestZapSink
 }
 
@@ -34,10 +36,10 @@ func NewTestZapLogger(component string) *TestZapLogger {
 		Buffer: gbytes.NewBuffer(),
 	}
 
-	testLogger := logger.NewLogger(
+	testLogger := goRouterLogger.CreateNewLoggerWithWriteSyncer(
 		component,
+		"DEBUG",
 		"unix-epoch",
-		zapcore.DebugLevel,
 		zapcore.NewMultiWriteSyncer(sink, zapcore.AddSync(ginkgo.GinkgoWriter)),
 	)
 	return &TestZapLogger{

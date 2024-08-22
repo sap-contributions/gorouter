@@ -11,7 +11,7 @@ import (
 	"code.cloudfoundry.org/gorouter/handlers"
 	"code.cloudfoundry.org/gorouter/test_util"
 
-	"code.cloudfoundry.org/gorouter/logger"
+	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -34,7 +34,7 @@ var _ = Describe("W3C", func() {
 
 	var (
 		handler    *handlers.W3C
-		logger     logger.Logger
+		logger     *slog.Logger
 		resp       http.ResponseWriter
 		req        *http.Request
 		reqInfo    *handlers.RequestInfo

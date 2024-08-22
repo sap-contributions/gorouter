@@ -9,7 +9,7 @@ import (
 
 	"code.cloudfoundry.org/gorouter/common"
 	"code.cloudfoundry.org/gorouter/config"
-	"code.cloudfoundry.org/gorouter/logger"
+	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/mbus"
 	mbusFakes "code.cloudfoundry.org/gorouter/mbus/fakes"
 	registryFakes "code.cloudfoundry.org/gorouter/registry/fakes"

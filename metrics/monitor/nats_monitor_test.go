@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"code.cloudfoundry.org/gorouter/logger"
+	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/metrics/fakes"
 	"code.cloudfoundry.org/gorouter/metrics/monitor"
 	"code.cloudfoundry.org/gorouter/test_util"
@@ -22,7 +22,7 @@ var _ = Describe("NATSMonitor", func() {
 		sender       *fakes.MetricSender
 		ch           chan time.Time
 		natsMonitor  *monitor.NATSMonitor
-		logger       logger.Logger
+		logger       *slog.Logger
 		process      ifrit.Process
 	)
 

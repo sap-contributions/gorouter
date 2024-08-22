@@ -2,13 +2,11 @@ package routeservice
 
 import (
 	"errors"
+	"log/slog"
 	"net/url"
 	"time"
 
-	"go.uber.org/zap"
-
 	"code.cloudfoundry.org/gorouter/common/secure"
-	"code.cloudfoundry.org/gorouter/logger"
 )
 
 const (
@@ -26,7 +24,7 @@ type RouteServiceConfig struct {
 	routeServiceTimeout              time.Duration
 	crypto                           secure.Crypto
 	cryptoPrev                       secure.Crypto
-	logger                           logger.Logger
+	logger                           *slog.Logger
 	recommendHttps                   bool
 	strictSignatureValidation        bool
 }
@@ -47,7 +45,7 @@ type RequestReceivedFromRouteService struct {
 }
 
 func NewRouteServiceConfig(
-	logger logger.Logger,
+	logger *slog.Logger,
 	enabled bool,
 	hairpinning bool,
 	hairpinningAllowlist []string,
@@ -116,16 +114,16 @@ func (rs *RouteServiceConfig) ValidateRequest(request RequestReceivedFromRouteSe
 	signatureContents, err := SignatureContentsFromHeaders(request.Signature, request.Metadata, rs.crypto)
 	if err != nil {
 		if rs.cryptoPrev == nil {
-			rs.logger.Error("proxy-route-service-current-key", zap.Error(err))
+			rs.logger.Error("proxy-route-service-current-key", err)
 			return nil, err
 		}
 
-		rs.logger.Debug("proxy-route-service-current-key", zap.String("message", "Decrypt-only secret used to validate route service signature header"))
+		rs.logger.Debug("proxy-route-service-current-key", slog.String("message", "Decrypt-only secret used to validate route service signature header"))
 		// Decrypt the head again trying to use the old key.
 		signatureContents, err = SignatureContentsFromHeaders(request.Signature, request.Metadata, rs.cryptoPrev)
 
 		if err != nil {
-			rs.logger.Error("proxy-route-service-previous-key", zap.Error(err))
+			rs.logger.Error("proxy-route-service-previous-key", err)
 			return nil, err
 		}
 	}
@@ -153,10 +151,9 @@ func (rs *RouteServiceConfig) generateSignatureAndMetadata(forwardedUrlRaw strin
 
 func (rs *RouteServiceConfig) validateSignatureTimeout(signatureContents SignatureContents) error {
 	if time.Since(signatureContents.RequestedTime) > rs.routeServiceTimeout {
-		rs.logger.Error("proxy-route-service-timeout",
-			zap.Error(ErrExpired),
-			zap.String("forwarded-url", signatureContents.ForwardedUrl),
-			zap.Time("request-time", signatureContents.RequestedTime),
+		rs.logger.With(slog.String("forwarded-url", signatureContents.ForwardedUrl),
+			slog.Time("request-time", signatureContents.RequestedTime)).Error("proxy-route-service-timeout",
+			ErrExpired,
 		)
 		return ErrExpired
 	}

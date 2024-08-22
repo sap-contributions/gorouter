@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"time"
 
-	"code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/metrics/fakes"
 	"code.cloudfoundry.org/gorouter/metrics/monitor"
 	"code.cloudfoundry.org/gorouter/test_util"
@@ -21,7 +20,7 @@ var _ = Describe("FileDescriptor", func() {
 		sender   *fakes.MetricSender
 		procPath string
 		tr       *time.Ticker
-		logger   logger.Logger
+		logger   *slog.Logger
 	)
 
 	BeforeEach(func() {

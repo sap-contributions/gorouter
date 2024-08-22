@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"io"
+	"log/slog"
 	"net/http"
 	"sync/atomic"
 	"time"
@@ -9,18 +10,17 @@ import (
 	"code.cloudfoundry.org/gorouter/accesslog"
 	"code.cloudfoundry.org/gorouter/accesslog/schema"
 	router_http "code.cloudfoundry.org/gorouter/common/http"
-	"code.cloudfoundry.org/gorouter/logger"
+	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/proxy/utils"
 
 	"github.com/urfave/negroni/v3"
-	"go.uber.org/zap"
 )
 
 type accessLog struct {
 	accessLogger       accesslog.AccessLogger
 	extraHeadersToLog  []string
 	logAttemptsDetails bool
-	logger             logger.Logger
+	logger             *slog.Logger
 }
 
 // NewAccessLog creates a new handler that handles logging requests to the
@@ -29,7 +29,7 @@ func NewAccessLog(
 	accessLogger accesslog.AccessLogger,
 	extraHeadersToLog []string,
 	logAttemptsDetails bool,
-	logger logger.Logger,
+	logger *slog.Logger,
 ) negroni.Handler {
 	return &accessLog{
 		accessLogger:       accessLogger,
@@ -55,7 +55,7 @@ func (a *accessLog) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http
 
 	reqInfo, err := ContextRequestInfo(r)
 	if err != nil {
-		a.logger.Panic("request-info-err", zap.Error(err))
+		a.logger.Error("request-info-err", goRouterLogger.ErrAttr(err))
 		return
 	}
 

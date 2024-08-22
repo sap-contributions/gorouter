@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"runtime"
@@ -9,19 +10,16 @@ import (
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/metrics"
-	"go.uber.org/zap"
-
-	"code.cloudfoundry.org/gorouter/logger"
 )
 
 type FileDescriptor struct {
 	path   string
 	ticker *time.Ticker
 	sender metrics.MetricSender
-	logger logger.Logger
+	logger *slog.Logger
 }
 
-func NewFileDescriptor(path string, ticker *time.Ticker, sender metrics.MetricSender, logger logger.Logger) *FileDescriptor {
+func NewFileDescriptor(path string, ticker *time.Ticker, sender metrics.MetricSender, logger *slog.Logger) *FileDescriptor {
 	return &FileDescriptor{
 		path:   path,
 		ticker: ticker,
@@ -39,7 +37,7 @@ func (f *FileDescriptor) Run(signals <-chan os.Signal, ready chan<- struct{}) er
 			if runtime.GOOS == "linux" {
 				dirEntries, err := os.ReadDir(f.path)
 				if err != nil {
-					f.logger.Error("error-reading-filedescriptor-path", zap.Error(err))
+					f.logger.Error("error-reading-filedescriptor-path", err)
 					break
 				}
 				numFds = symlinks(dirEntries)
@@ -49,7 +47,7 @@ func (f *FileDescriptor) Run(signals <-chan os.Signal, ready chan<- struct{}) er
 					// no /proc on MacOS, falling back to lsof
 					out, err := exec.Command("/bin/sh", "-c", fmt.Sprintf("lsof -p %v", os.Getpid())).Output()
 					if err != nil {
-						f.logger.Error("error-running-lsof", zap.Error(err))
+						f.logger.Error("error-running-lsof", err)
 						break
 					}
 					lines := strings.Split(string(out), "\n")
@@ -59,7 +57,7 @@ func (f *FileDescriptor) Run(signals <-chan os.Signal, ready chan<- struct{}) er
 				}
 			}
 			if err := f.sender.SendValue("file_descriptors", float64(numFds), "file"); err != nil {
-				f.logger.Error("error-sending-file-descriptor-metric", zap.Error(err))
+				f.logger.Error("error-sending-file-descriptor-metric", err)
 			}
 
 		case <-signals:

@@ -7,7 +7,7 @@ import (
 
 	"code.cloudfoundry.org/gorouter/errorwriter"
 	"code.cloudfoundry.org/gorouter/handlers"
-	"code.cloudfoundry.org/gorouter/logger"
+	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/test_util"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -18,7 +18,7 @@ import (
 
 var _ = Describe("Protocolcheck", func() {
 	var (
-		logger logger.Logger
+		logger *slog.Logger
 		ew     = errorwriter.NewPlaintextErrorWriter()
 
 		nextCalled  bool

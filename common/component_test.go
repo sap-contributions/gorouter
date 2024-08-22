@@ -1,23 +1,22 @@
 package common_test
 
 import (
+	"encoding/json"
+	"fmt"
 	"io"
+	"net"
+	"net/http"
+	"time"
+
+	"github.com/nats-io/nats.go"
 
 	. "code.cloudfoundry.org/gorouter/common"
 	"code.cloudfoundry.org/gorouter/common/health"
-	"code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/test_util"
-	"github.com/nats-io/nats.go"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
-
-	"encoding/json"
-	"fmt"
-	"net"
-	"net/http"
-	"time"
 )
 
 type MarshalableValue struct {
@@ -165,7 +164,7 @@ var _ = Describe("Component", func() {
 	Describe("Register", func() {
 		var mbusClient *nats.Conn
 		var natsRunner *test_util.NATSRunner
-		var logger logger.Logger
+		var logger *slog.Logger
 
 		BeforeEach(func() {
 			natsPort := test_util.NextAvailPort()

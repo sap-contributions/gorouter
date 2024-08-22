@@ -1,22 +1,21 @@
 package registry_test
 
 import (
+	"encoding/json"
 	"fmt"
+	"time"
 
-	"code.cloudfoundry.org/gorouter/logger"
-	. "code.cloudfoundry.org/gorouter/registry"
-	"code.cloudfoundry.org/gorouter/test_util"
-	"code.cloudfoundry.org/routing-api/models"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 
+	. "code.cloudfoundry.org/gorouter/registry"
+	"code.cloudfoundry.org/gorouter/test_util"
+	"code.cloudfoundry.org/routing-api/models"
+
 	"code.cloudfoundry.org/gorouter/config"
 	"code.cloudfoundry.org/gorouter/metrics/fakes"
 	"code.cloudfoundry.org/gorouter/route"
-
-	"encoding/json"
-	"time"
 )
 
 var _ = Describe("RouteRegistry", func() {
@@ -25,7 +24,7 @@ var _ = Describe("RouteRegistry", func() {
 
 	var fooEndpoint, barEndpoint, bar2Endpoint *route.Endpoint
 	var configObj *config.Config
-	var logger logger.Logger
+	var logger *slog.Logger
 
 	var azPreference, az string
 

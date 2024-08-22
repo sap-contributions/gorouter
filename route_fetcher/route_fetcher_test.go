@@ -8,7 +8,7 @@ import (
 
 	"code.cloudfoundry.org/clock/fakeclock"
 	"code.cloudfoundry.org/gorouter/config"
-	"code.cloudfoundry.org/gorouter/logger"
+	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 	testRegistry "code.cloudfoundry.org/gorouter/registry/fakes"
 	"code.cloudfoundry.org/gorouter/route"
 	. "code.cloudfoundry.org/gorouter/route_fetcher"
@@ -39,7 +39,7 @@ var _ = Describe("RouteFetcher", func() {
 		tokenFetcher *test_uaa_client.FakeTokenFetcher
 		registry     *testRegistry.FakeRegistry
 		fetcher      *RouteFetcher
-		logger       logger.Logger
+		logger       *slog.Logger
 		client       *fake_routing_api.FakeClient
 		eventSource  *fake_routing_api.FakeEventSource
 

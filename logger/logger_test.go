@@ -16,7 +16,7 @@ var _ = Describe("Logger", func() {
 
 	var component = "my-component"
 	var action = "my-action"
-	var testField = zap.String("new-key", "new-value")
+	var testField = slog.String("new-key", "new-value")
 
 	BeforeEach(func() {
 		testSink = &test_util.TestZapSink{Buffer: gbytes.NewBuffer()}

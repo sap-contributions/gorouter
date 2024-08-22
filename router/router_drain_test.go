@@ -17,7 +17,7 @@ import (
 	cfg "code.cloudfoundry.org/gorouter/config"
 	"code.cloudfoundry.org/gorouter/errorwriter"
 	sharedfakes "code.cloudfoundry.org/gorouter/fakes"
-	"code.cloudfoundry.org/gorouter/logger"
+	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/mbus"
 	"code.cloudfoundry.org/gorouter/metrics"
 	fakeMetrics "code.cloudfoundry.org/gorouter/metrics/fakes"
@@ -37,7 +37,7 @@ import (
 
 var _ = Describe("Router", func() {
 	var (
-		logger     logger.Logger
+		logger     *slog.Logger
 		natsRunner *test_util.NATSRunner
 		config     *cfg.Config
 		p          http.Handler

@@ -12,7 +12,7 @@ import (
 	"code.cloudfoundry.org/gorouter/accesslog/schema"
 	schemaFakes "code.cloudfoundry.org/gorouter/accesslog/schema/fakes"
 	"code.cloudfoundry.org/gorouter/config"
-	"code.cloudfoundry.org/gorouter/logger"
+	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/route"
 	"code.cloudfoundry.org/gorouter/test_util"
 	. "github.com/onsi/ginkgo/v2"
@@ -23,7 +23,7 @@ var _ = Describe("AccessLog", func() {
 
 	Describe("LoggregatorAccessLogger", func() {
 		var (
-			logger logger.Logger
+			logger *slog.Logger
 			cfg    *config.Config
 			ls     *schemaFakes.FakeLogSender
 		)

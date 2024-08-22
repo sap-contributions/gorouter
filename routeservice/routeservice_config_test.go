@@ -7,7 +7,7 @@ import (
 
 	"code.cloudfoundry.org/gorouter/common/secure"
 	"code.cloudfoundry.org/gorouter/common/secure/fakes"
-	"code.cloudfoundry.org/gorouter/logger"
+	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/routeservice"
 	"code.cloudfoundry.org/gorouter/test_util"
 	. "github.com/onsi/ginkgo/v2"
@@ -20,7 +20,7 @@ var _ = Describe("Route Service Config", func() {
 		crypto           secure.Crypto
 		cryptoPrev       secure.Crypto
 		cryptoKey        = "ABCDEFGHIJKLMNOP"
-		logger           logger.Logger
+		logger           *slog.Logger
 		recommendHttps   bool
 		strictValidation bool
 	)

@@ -9,16 +9,16 @@ import (
 	"net/http/httptest"
 	"strings"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	"github.com/urfave/negroni/v3"
+
 	"code.cloudfoundry.org/gorouter/config"
 	"code.cloudfoundry.org/gorouter/errorwriter"
 	"code.cloudfoundry.org/gorouter/handlers"
 	logger_fakes "code.cloudfoundry.org/gorouter/logger/fakes"
 	"code.cloudfoundry.org/gorouter/routeservice"
 	"code.cloudfoundry.org/gorouter/test_util"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	"github.com/urfave/negroni/v3"
-	"go.uber.org/zap"
 )
 
 var _ = Describe("Clientcert", func() {
@@ -62,7 +62,7 @@ var _ = Describe("Clientcert", func() {
 
 		switch errorCase {
 		case "forceDeleteError":
-			Expect(zapFields).To(ContainElement(zap.Error(errors.New("forceDelete error"))))
+			Expect(zapFields).To(ContainElement(goRouterLogger.ErrAttr(errors.New("forceDelete error"))))
 			Expect(rw.Code).To(Equal(http.StatusBadGateway))
 		case "routeServiceTimeout":
 			Expect(rw.Code).To(Equal(http.StatusGatewayTimeout))

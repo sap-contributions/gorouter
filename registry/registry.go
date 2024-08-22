@@ -2,6 +2,8 @@ package registry
 
 import (
 	"encoding/json"
+	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -9,7 +11,6 @@ import (
 	"go.uber.org/zap"
 
 	"code.cloudfoundry.org/gorouter/config"
-	"code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/metrics"
 	"code.cloudfoundry.org/gorouter/registry/container"
 	"code.cloudfoundry.org/gorouter/route"
@@ -33,7 +34,7 @@ const (
 type RouteRegistry struct {
 	sync.RWMutex
 
-	logger logger.Logger
+	logger *slog.Logger
 
 	// Access to the Trie datastructure should be governed by the RWMutex of RouteRegistry
 	byURI *container.Trie
@@ -61,7 +62,7 @@ type RouteRegistry struct {
 	DefaultLoadBalancingAlgorithm string
 }
 
-func NewRouteRegistry(logger logger.Logger, c *config.Config, reporter metrics.RouteRegistryReporter) *RouteRegistry {
+func NewRouteRegistry(logger *slog.Logger, c *config.Config, reporter metrics.RouteRegistryReporter) *RouteRegistry {
 	r := &RouteRegistry{}
 	r.logger = logger
 	r.byURI = container.NewTrie()
@@ -97,11 +98,11 @@ func (r *RouteRegistry) Register(uri route.Uri, endpoint *route.Endpoint) {
 
 	switch endpointAdded {
 	case route.ADDED:
-		r.logger.Info("endpoint-registered", zapData(uri, endpoint)...)
+		r.logger.Info("endpoint-registered", slog.Any(uri.String(), endpoint))
 	case route.UPDATED:
-		r.logger.Debug("endpoint-registered", zapData(uri, endpoint)...)
+		r.logger.Debug("endpoint-registered", slog.Any(uri.String(), endpoint))
 	default:
-		r.logger.Debug("endpoint-not-registered", zapData(uri, endpoint)...)
+		r.logger.Debug("endpoint-not-registered", slog.Any(uri.String(), endpoint))
 	}
 }
 
@@ -150,9 +151,9 @@ func (r *RouteRegistry) insertRouteKey(routekey route.Uri, uri route.Uri) *route
 			LoadBalancingAlgorithm: r.DefaultLoadBalancingAlgorithm,
 		})
 		r.byURI.Insert(routekey, pool)
-		r.logger.Info("route-registered", zap.Stringer("uri", routekey))
+		r.logger.Info("route-registered", slog.Any("uri", fmt.Stringer(routekey)))
 		// for backward compatibility:
-		r.logger.Debug("uri-added", zap.Stringer("uri", routekey))
+		r.logger.Debug("uri-added", slog.Any("uri", fmt.Stringer(routekey)))
 	}
 	return pool
 }
@@ -374,7 +375,7 @@ func (r *RouteRegistry) pruneStaleDroplets() {
 				isolationSegment = "-"
 			}
 			r.logger.Info("pruned-route",
-				zap.String("uri", t.ToPath()),
+				slog.String("uri", t.ToPath()),
 				zap.Any("endpoints", addresses),
 				zap.Any("isolation_segment", isolationSegment),
 			)
@@ -413,19 +414,19 @@ func splitHostAndContextPath(uri route.Uri) (string, string) {
 	return before, contextPath
 }
 
-func zapData(uri route.Uri, endpoint *route.Endpoint) []zap.Field {
-	isoSegField := zap.String("isolation_segment", "-")
+func zapData(uri route.Uri, endpoint *route.Endpoint) []any {
+	isoSegField := slog.String("isolation_segment", "-")
 	if endpoint.IsolationSegment != "" {
-		isoSegField = zap.String("isolation_segment", endpoint.IsolationSegment)
+		isoSegField = slog.String("isolation_segment", endpoint.IsolationSegment)
 	}
-	return []zap.Field{
+	return []any{
 		zap.Stringer("uri", uri),
-		zap.String("route_service_url", endpoint.RouteServiceUrl),
-		zap.String("backend", endpoint.CanonicalAddr()),
-		zap.String("application_id", endpoint.ApplicationId),
-		zap.String("instance_id", endpoint.PrivateInstanceId),
-		zap.String("server_cert_domain_san", endpoint.ServerCertDomainSAN),
-		zap.String("protocol", endpoint.Protocol),
+		slog.String("route_service_url", endpoint.RouteServiceUrl),
+		slog.String("backend", endpoint.CanonicalAddr()),
+		slog.String("application_id", endpoint.ApplicationId),
+		slog.String("instance_id", endpoint.PrivateInstanceId),
+		slog.String("server_cert_domain_san", endpoint.ServerCertDomainSAN),
+		slog.String("protocol", endpoint.Protocol),
 		zap.Any("modification_tag", endpoint.ModificationTag),
 		isoSegField,
 		zap.Bool("isTLS", endpoint.IsTLS()),

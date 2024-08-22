@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/gorouter/handlers"
-	"code.cloudfoundry.org/gorouter/logger"
+	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 	metrics_fakes "code.cloudfoundry.org/gorouter/metrics/fakes"
 	"code.cloudfoundry.org/gorouter/route"
 	"code.cloudfoundry.org/gorouter/test_util"
@@ -28,7 +28,7 @@ var _ = Describe("Reporter Handler", func() {
 		req  *http.Request
 
 		fakeReporter *metrics_fakes.FakeProxyReporter
-		logger       logger.Logger
+		logger       *slog.Logger
 		prevHandler  negroni.Handler
 
 		nextCalled bool

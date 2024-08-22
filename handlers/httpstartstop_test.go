@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"code.cloudfoundry.org/gorouter/logger"
+	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/route"
 
 	"code.cloudfoundry.org/gorouter/common/uuid"
@@ -54,7 +54,7 @@ var _ = Describe("HTTPStartStop Handler", func() {
 		req  *http.Request
 
 		fakeEmitter *fake.FakeEventEmitter
-		logger      logger.Logger
+		logger      *slog.Logger
 
 		nextCalled bool
 	)

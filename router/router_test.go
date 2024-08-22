@@ -24,16 +24,22 @@ import (
 	"syscall"
 	"time"
 
-	. "code.cloudfoundry.org/gorouter/router"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	. "code.cloudfoundry.org/gorouter/router"
+
+	"github.com/nats-io/nats.go"
+	"github.com/onsi/gomega/gbytes"
+	"github.com/tedsuo/ifrit"
+	"github.com/tedsuo/ifrit/grouper"
+	"github.com/tedsuo/ifrit/sigmon"
 
 	"code.cloudfoundry.org/gorouter/accesslog"
 	"code.cloudfoundry.org/gorouter/common/health"
 	"code.cloudfoundry.org/gorouter/common/schema"
 	"code.cloudfoundry.org/gorouter/errorwriter"
 	"code.cloudfoundry.org/gorouter/handlers"
-	"code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/mbus"
 	"code.cloudfoundry.org/gorouter/metrics"
 	"code.cloudfoundry.org/gorouter/proxy"
@@ -41,11 +47,6 @@ import (
 	"code.cloudfoundry.org/gorouter/routeservice"
 	"code.cloudfoundry.org/gorouter/test"
 	"code.cloudfoundry.org/gorouter/test_util"
-	"github.com/nats-io/nats.go"
-	"github.com/onsi/gomega/gbytes"
-	"github.com/tedsuo/ifrit"
-	"github.com/tedsuo/ifrit/grouper"
-	"github.com/tedsuo/ifrit/sigmon"
 
 	cfg "code.cloudfoundry.org/gorouter/config"
 	sharedfakes "code.cloudfoundry.org/gorouter/fakes"
@@ -68,7 +69,7 @@ var _ = Describe("Router", func() {
 		registry            *rregistry.RouteRegistry
 		varz                vvarz.Varz
 		router              *Router
-		logger              logger.Logger
+		logger              *slog.Logger
 		statusPort          uint16
 		statusTLSPort       uint16
 		statusRoutesPort    uint16
@@ -2383,7 +2384,7 @@ func badCertTemplate(cname string) (*x509.Certificate, error) {
 	return &tmpl, nil
 }
 
-func initializeRouter(config *cfg.Config, backendIdleTimeout, requestTimeout time.Duration, registry *rregistry.RouteRegistry, varz vvarz.Varz, mbusClient *nats.Conn, logger logger.Logger, routeServicesServer *sharedfakes.RouteServicesServer) (*Router, error) {
+func initializeRouter(config *cfg.Config, backendIdleTimeout, requestTimeout time.Duration, registry *rregistry.RouteRegistry, varz vvarz.Varz, mbusClient *nats.Conn, logger *slog.Logger, routeServicesServer *sharedfakes.RouteServicesServer) (*Router, error) {
 	sender := new(fakeMetrics.MetricSender)
 	batcher := new(fakeMetrics.MetricBatcher)
 	metricReporter := &metrics.MetricsReporter{Sender: sender, Batcher: batcher}

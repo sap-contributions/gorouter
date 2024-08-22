@@ -1,14 +1,14 @@
 package logger
 
 import (
-	"code.cloudfoundry.org/lager/v3"
-	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 
+	"code.cloudfoundry.org/lager/v3"
+
 	"github.com/openzipkin/zipkin-go/idgenerator"
 	"github.com/openzipkin/zipkin-go/model"
-	"go.uber.org/zap"
 )
 
 const (
@@ -18,13 +18,14 @@ const (
 // LagerAdapter satisfies the lager.Logger interface with zap as the
 // implementation.
 type LagerAdapter struct {
-	originalLogger Logger
+	originalLogger *slog.Logger
+	session        string
 }
 
 // NewLagerAdapter returns a new lager.Logger that uses zap underneath.
-func NewLagerAdapter(zapLogger Logger) *LagerAdapter {
+func NewLagerAdapter(slogLogger *slog.Logger) *LagerAdapter {
 	return &LagerAdapter{
-		originalLogger: zapLogger,
+		originalLogger: slogLogger,
 	}
 }
 
@@ -33,10 +34,10 @@ func (l *LagerAdapter) RegisterSink(_ lager.Sink) {}
 
 // Session returns a new logger with a nested session.
 func (l *LagerAdapter) Session(task string, data ...lager.Data) lager.Logger {
-	tmpLogger := l.originalLogger.Session(task)
+	tmpLogger := l.originalLogger.With("session", l.session+"."+task)
 
 	if data != nil {
-		tmpLogger = l.originalLogger.With(dataToFields(data)...)
+		tmpLogger = l.originalLogger.With(dataToFields(data))
 	}
 
 	return &LagerAdapter{
@@ -46,33 +47,33 @@ func (l *LagerAdapter) Session(task string, data ...lager.Data) lager.Logger {
 
 // SessionName returns the name of the logger session
 func (l *LagerAdapter) SessionName() string {
-	return l.originalLogger.SessionName()
+	return l.session
 }
 
 // Debug logs a message at the debug log level.
 func (l *LagerAdapter) Debug(action string, data ...lager.Data) {
-	l.originalLogger.Debug(action, dataToFields(data)...)
+	l.originalLogger.Debug(action, dataToFields(data))
 }
 
 // Info logs a message at the info log level.
 func (l *LagerAdapter) Info(action string, data ...lager.Data) {
-	l.originalLogger.Info(action, dataToFields(data)...)
+	l.originalLogger.Info(action, dataToFields(data))
 }
 
 // Error logs a message at the error log level.
 func (l *LagerAdapter) Error(action string, err error, data ...lager.Data) {
-	l.originalLogger.Error(action, appendError(err, dataToFields(data))...)
+	l.originalLogger.Error(action, append(dataToFields(data), ErrAttr(err)))
 }
 
 // Fatal logs a message and exits with status 1.
 func (l *LagerAdapter) Fatal(action string, err error, data ...lager.Data) {
-	l.originalLogger.Fatal(action, appendError(err, dataToFields(data))...)
+	l.originalLogger.Error(action, append(dataToFields(data), ErrAttr(err)))
 }
 
 // WithData returns a logger with newly added data.
 func (l *LagerAdapter) WithData(data lager.Data) lager.Logger {
 	return &LagerAdapter{
-		originalLogger: l.originalLogger.With(dataToFields([]lager.Data{data})...),
+		originalLogger: l.originalLogger.With(dataToFields([]lager.Data{data})),
 	}
 }
 
@@ -91,16 +92,12 @@ func (l *LagerAdapter) WithTraceInfo(req *http.Request) lager.Logger {
 	return l.WithData(lager.Data{"trace-id": traceID.String(), "span-id": spanID.String()})
 }
 
-func dataToFields(data []lager.Data) []zap.Field {
-	fields := []zap.Field{}
+func dataToFields(data []lager.Data) []slog.Attr {
+	var fields []slog.Attr
 	for _, datum := range data {
 		for key, value := range datum {
-			fields = append(fields, zap.String(key, fmt.Sprintf("%v", value)))
+			fields = append(fields, slog.Any(key, value))
 		}
 	}
 	return fields
-}
-
-func appendError(err error, fields []zap.Field) []zap.Field {
-	return append(fields, zap.Error(err))
 }
