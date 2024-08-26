@@ -11,8 +11,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"go.uber.org/zap"
-
 	"code.cloudfoundry.org/gorouter/config"
 	"code.cloudfoundry.org/gorouter/proxy/fails"
 	"code.cloudfoundry.org/routing-api/models"
@@ -449,7 +447,7 @@ func (p *EndpointPool) EndpointFailed(endpoint *Endpoint, err error) {
 		return
 	}
 
-	logger := p.logger.With(zap.Any("route-endpoint", endpoint.ToLogData()))
+	logger := p.logger.With(slog.Any("route-endpoint", endpoint.ToLogData()))
 	if e.endpoint.useTls && fails.PrunableClassifiers.Classify(err) {
 		logger.Error("prune-failed-endpoint")
 		p.removeEndpoint(e)
@@ -554,7 +552,7 @@ func (e *Endpoint) ToLogData() []any {
 	return []any{
 		slog.String("ApplicationId", e.ApplicationId),
 		slog.String("Addr", e.addr),
-		zap.Any("Tags", e.Tags),
+		slog.Any("Tags", e.Tags),
 		slog.String("RouteServiceUrl", e.RouteServiceUrl),
 		slog.String("AZ", e.AvailabilityZone),
 	}

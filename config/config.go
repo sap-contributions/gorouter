@@ -16,7 +16,6 @@ import (
 	"go.step.sm/crypto/pemutil"
 
 	"code.cloudfoundry.org/localip"
-	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 )
 
@@ -328,11 +327,11 @@ func checkClientCertificateMetadataRule(chain []*x509.Certificate, logger *slog.
 		for _, validSubject := range rule.ValidSubjects {
 			validCertSubject := validSubject.ToName()
 			if validCertSubject.ToRDNSequence().String() == subject.ToRDNSequence().String() {
-				logger.Debug("chain", slog.String("issuer", cert.Issuer.String()), zap.Bool("CA", cert.IsCA), slog.String("subject", cert.Subject.String()))
+				logger.Debug("chain", slog.String("issuer", cert.Issuer.String()), slog.Bool("CA", cert.IsCA), slog.String("subject", cert.Subject.String()))
 				return nil
 			}
 		}
-		logger.Warn("invalid-subject", slog.String("issuer", cert.Issuer.String()), slog.String("subject", cert.Subject.String()), zap.Any("allowed", rule.ValidSubjects))
+		logger.Warn("invalid-subject", slog.String("issuer", cert.Issuer.String()), slog.String("subject", cert.Subject.String()), slog.Any("allowed", rule.ValidSubjects))
 		return fmt.Errorf("subject not in the list of allowed subjects for CA Subject %q: %q", rule.CASubject, subject)
 	}
 	// this should never happen as the function is only called on successful client certificate verification as callback

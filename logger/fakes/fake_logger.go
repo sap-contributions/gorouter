@@ -2,6 +2,7 @@
 package fakes
 
 import (
+	"log/slog"
 	"sync"
 
 	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
@@ -9,7 +10,7 @@ import (
 )
 
 type FakeLogger struct {
-	CheckStub        func(zap.Level, string) *zap.CheckedMessage
+	CheckStub        func(slog.Level, string) *zap.CheckedMessage
 	checkMutex       sync.RWMutex
 	checkArgsForCall []struct {
 		arg1 zap.Level

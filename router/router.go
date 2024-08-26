@@ -18,7 +18,6 @@ import (
 
 	"github.com/armon/go-proxyproto"
 	"github.com/nats-io/nats.go"
-	"go.uber.org/zap"
 
 	"code.cloudfoundry.org/gorouter/common"
 	"code.cloudfoundry.org/gorouter/common/health"
@@ -204,7 +203,7 @@ func (r *Router) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	// Schedule flushing active app's app_id
 	r.ScheduleFlushApps()
 
-	r.logger.Debug("Sleeping before returning success on /health endpoint to preload routing table", zap.Float64("sleep_time_seconds", r.config.StartResponseDelayInterval.Seconds()))
+	r.logger.Debug("Sleeping before returning success on /health endpoint to preload routing table", slog.Float64("sleep_time_seconds", r.config.StartResponseDelayInterval.Seconds()))
 	time.Sleep(r.config.StartResponseDelayInterval)
 
 	server := &http.Server{
@@ -270,8 +269,8 @@ func (r *Router) DrainAndStop() {
 	drainTimeout := r.config.DrainTimeout
 	r.logger.Info(
 		"gorouter-draining",
-		zap.Float64("wait_seconds", drainWait.Seconds()),
-		zap.Float64("timeout_seconds", drainTimeout.Seconds()),
+		slog.Float64("wait_seconds", drainWait.Seconds()),
+		slog.Float64("timeout_seconds", drainTimeout.Seconds()),
 	)
 
 	r.Drain(drainWait, drainTimeout)
@@ -323,7 +322,7 @@ func (r *Router) serveHTTPS(server *http.Server, errChan chan error) error {
 
 	r.tlsListener = tls.NewListener(listener, tlsConfig)
 
-	r.logger.Info("tls-listener-started", zap.Any("address", r.tlsListener.Addr()))
+	r.logger.Info("tls-listener-started", slog.Any("address", r.tlsListener.Addr()))
 
 	go func() {
 		err := server.Serve(r.tlsListener)
@@ -367,7 +366,7 @@ func (r *Router) serveHTTP(server *http.Server, errChan chan error) error {
 		}
 	}
 
-	r.logger.Info("tcp-listener-started", zap.Any("address", r.listener.Addr()))
+	r.logger.Info("tcp-listener-started", slog.Any("address", r.listener.Addr()))
 
 	go func() {
 		err := server.Serve(r.listener)
@@ -443,7 +442,7 @@ func (r *Router) Stop() {
 	r.uptimeMonitor.Stop()
 	r.logger.Info(
 		"gorouter.stopped",
-		zap.Duration("took", time.Since(stoppingAt)),
+		slog.Duration("took", time.Since(stoppingAt)),
 	)
 }
 
@@ -544,7 +543,7 @@ func (r *Router) flushApps(t time.Time) {
 
 	z := b.Bytes()
 
-	r.logger.Debug("Debug Info", zap.Int("Active apps", len(x)), zap.Int("message size:", len(z)))
+	r.logger.Debug("Debug Info", slog.Int("Active apps", len(x)), slog.Int("message size:", len(z)))
 
 	r.mbusClient.Publish("router.active_apps", z)
 }

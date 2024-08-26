@@ -8,8 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/zap"
-
 	"code.cloudfoundry.org/gorouter/config"
 	"code.cloudfoundry.org/gorouter/metrics"
 	"code.cloudfoundry.org/gorouter/registry/container"
@@ -178,20 +176,20 @@ func (r *RouteRegistry) unregister(uri route.Uri, endpoint *route.Endpoint) {
 	if pool != nil {
 		endpointRemoved := pool.Remove(endpoint)
 		if endpointRemoved {
-			r.logger.Info("endpoint-unregistered", zapData(uri, endpoint)...)
+			r.logger.Info("endpoint-unregistered", buildSlogAttrs(uri, endpoint)...)
 		} else {
-			r.logger.Info("endpoint-not-unregistered", zapData(uri, endpoint)...)
+			r.logger.Info("endpoint-not-unregistered", buildSlogAttrs(uri, endpoint)...)
 		}
 
 		if pool.IsEmpty() {
 			if r.EmptyPoolResponseCode503 && r.EmptyPoolTimeout > 0 {
 				if time.Since(pool.LastUpdated()) > r.EmptyPoolTimeout {
 					r.byURI.Delete(uri)
-					r.logger.Info("route-unregistered", zap.Stringer("uri", uri))
+					r.logger.Info("route-unregistered", slog.Any("uri", uri))
 				}
 			} else {
 				r.byURI.Delete(uri)
-				r.logger.Info("route-unregistered", zap.Stringer("uri", uri))
+				r.logger.Info("route-unregistered", slog.Any("uri", uri))
 			}
 		}
 	}
@@ -376,8 +374,8 @@ func (r *RouteRegistry) pruneStaleDroplets() {
 			}
 			r.logger.Info("pruned-route",
 				slog.String("uri", t.ToPath()),
-				zap.Any("endpoints", addresses),
-				zap.Any("isolation_segment", isolationSegment),
+				slog.Any("endpoints", addresses),
+				slog.String("isolation_segment", isolationSegment),
 			)
 			r.reporter.CaptureRoutesPruned(uint64(len(endpoints)))
 		}
@@ -414,21 +412,21 @@ func splitHostAndContextPath(uri route.Uri) (string, string) {
 	return before, contextPath
 }
 
-func zapData(uri route.Uri, endpoint *route.Endpoint) []any {
+func buildSlogAttrs(uri route.Uri, endpoint *route.Endpoint) []any {
 	isoSegField := slog.String("isolation_segment", "-")
 	if endpoint.IsolationSegment != "" {
 		isoSegField = slog.String("isolation_segment", endpoint.IsolationSegment)
 	}
 	return []any{
-		zap.Stringer("uri", uri),
+		slog.Any("uri", uri),
 		slog.String("route_service_url", endpoint.RouteServiceUrl),
 		slog.String("backend", endpoint.CanonicalAddr()),
 		slog.String("application_id", endpoint.ApplicationId),
 		slog.String("instance_id", endpoint.PrivateInstanceId),
 		slog.String("server_cert_domain_san", endpoint.ServerCertDomainSAN),
 		slog.String("protocol", endpoint.Protocol),
-		zap.Any("modification_tag", endpoint.ModificationTag),
+		slog.Any("modification_tag", endpoint.ModificationTag),
 		isoSegField,
-		zap.Bool("isTLS", endpoint.IsTLS()),
+		slog.Bool("isTLS", endpoint.IsTLS()),
 	}
 }

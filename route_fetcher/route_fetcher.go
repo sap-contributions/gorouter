@@ -10,7 +10,6 @@ import (
 
 	"code.cloudfoundry.org/clock"
 	"github.com/cloudfoundry/dropsonde/metrics"
-	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 
 	"code.cloudfoundry.org/gorouter/config"
@@ -71,7 +70,7 @@ func (r *RouteFetcher) Run(signals <-chan os.Signal, ready chan<- struct{}) erro
 	r.startEventCycle()
 
 	ticker := r.clock.NewTicker(r.FetchRoutesInterval)
-	r.logger.Debug("created-ticker", zap.Duration("interval", r.FetchRoutesInterval))
+	r.logger.Debug("created-ticker", slog.Duration("interval", r.FetchRoutesInterval))
 	r.logger.Info("syncer-started")
 
 	close(ready)
@@ -161,7 +160,7 @@ func (r *RouteFetcher) subscribeToEvents(token *oauth2.Token) error {
 			}
 			break
 		}
-		r.logger.Debug("received-event", zap.Any("event", event))
+		r.logger.Debug("received-event", slog.Any("event", event))
 		r.eventChannel <- event
 	}
 	return err
@@ -198,7 +197,7 @@ func (r *RouteFetcher) FetchRoutes() error {
 		return err
 	}
 
-	r.logger.Debug("syncer-refreshing-endpoints", zap.Int("number-of-routes", len(routes)))
+	r.logger.Debug("syncer-refreshing-endpoints", slog.Int("number-of-routes", len(routes)))
 	r.refreshEndpoints(routes)
 	return nil
 }

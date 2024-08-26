@@ -11,8 +11,6 @@ import (
 
 	"code.cloudfoundry.org/gorouter/common/health"
 
-	"go.uber.org/zap"
-
 	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 )
 
@@ -44,7 +42,7 @@ func (p *panicCheck) ServeHTTP(rw http.ResponseWriter, r *http.Request, next htt
 					err = fmt.Errorf("%v", rec)
 				}
 				logger := LoggerWithTraceInfo(p.logger, r)
-				logger.Error("panic-check", slog.String("host", r.Host), zap.Any("error", goRouterLogger.ErrAttr(err)))
+				logger.Error("panic-check", slog.String("host", r.Host), slog.Any("error", goRouterLogger.ErrAttr(err)))
 
 				rw.Header().Set(router_http.CfRouterError, "unknown_failure")
 				rw.WriteHeader(http.StatusBadGateway)

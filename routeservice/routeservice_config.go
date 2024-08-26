@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/gorouter/common/secure"
+	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 )
 
 const (
@@ -114,7 +115,7 @@ func (rs *RouteServiceConfig) ValidateRequest(request RequestReceivedFromRouteSe
 	signatureContents, err := SignatureContentsFromHeaders(request.Signature, request.Metadata, rs.crypto)
 	if err != nil {
 		if rs.cryptoPrev == nil {
-			rs.logger.Error("proxy-route-service-current-key", err)
+			rs.logger.Error("proxy-route-service-current-key", goRouterLogger.ErrAttr(err))
 			return nil, err
 		}
 
@@ -123,7 +124,7 @@ func (rs *RouteServiceConfig) ValidateRequest(request RequestReceivedFromRouteSe
 		signatureContents, err = SignatureContentsFromHeaders(request.Signature, request.Metadata, rs.cryptoPrev)
 
 		if err != nil {
-			rs.logger.Error("proxy-route-service-previous-key", err)
+			rs.logger.Error("proxy-route-service-previous-key", goRouterLogger.ErrAttr(err))
 			return nil, err
 		}
 	}
@@ -151,9 +152,10 @@ func (rs *RouteServiceConfig) generateSignatureAndMetadata(forwardedUrlRaw strin
 
 func (rs *RouteServiceConfig) validateSignatureTimeout(signatureContents SignatureContents) error {
 	if time.Since(signatureContents.RequestedTime) > rs.routeServiceTimeout {
-		rs.logger.With(slog.String("forwarded-url", signatureContents.ForwardedUrl),
-			slog.Time("request-time", signatureContents.RequestedTime)).Error("proxy-route-service-timeout",
-			ErrExpired,
+		rs.logger.Error("proxy-route-service-timeout",
+			goRouterLogger.ErrAttr(ErrExpired),
+			slog.String("forwarded-url", signatureContents.ForwardedUrl),
+			slog.Time("request-time", signatureContents.RequestedTime),
 		)
 		return ErrExpired
 	}
