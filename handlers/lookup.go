@@ -102,7 +102,7 @@ func (l *lookupHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request, next 
 
 	requestInfo, err := ContextRequestInfo(r)
 	if err != nil {
-		logger.Error("request-info-err", goRouterLogger.ErrAttr(err))
+		goRouterLogger.Panic(logger, "request-info-err", goRouterLogger.ErrAttr(err))
 		return
 	}
 	requestInfo.RoutePool = pool

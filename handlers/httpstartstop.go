@@ -38,12 +38,12 @@ func (hh *httpStartStopHandler) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 
 	requestID, err := uuid.ParseHex(r.Header.Get(VcapRequestIdHeader))
 	if err != nil {
-		logger.Error("start-stop-handler-err", slog.String("error", "X-Vcap-Request-Id not found"))
+		goRouterLogger.Panic(logger, "start-stop-handler-err", slog.String("error", "X-Vcap-Request-Id not found"))
 		return
 	}
 	prw, ok := rw.(utils.ProxyResponseWriter)
 	if !ok {
-		logger.Error("request-info-err", slog.String("error", "ProxyResponseWriter not found"))
+		goRouterLogger.Panic(logger, "request-info-err", slog.String("error", "ProxyResponseWriter not found"))
 		return
 	}
 

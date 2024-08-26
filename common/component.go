@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"os"
 	"runtime"
 	"sync"
 	"syscall"
@@ -61,8 +60,7 @@ func NewProcessStatus() *ProcessStatus {
 func (p *ProcessStatus) Update() {
 	e := syscall.Getrusage(syscall.RUSAGE_SELF, p.rusage)
 	if e != nil {
-		log.Error("failed-to-get-rusage", goRouterLogger.ErrAttr(e))
-		os.Exit(1)
+		goRouterLogger.Fatal(log, "failed-to-get-rusage", goRouterLogger.ErrAttr(e))
 	}
 
 	p.Lock()

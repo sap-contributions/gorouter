@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"os"
@@ -56,7 +57,7 @@ func main() {
 	flag.Parse()
 
 	prefix := "gorouter.stdout"
-	tmpLogger := goRouterLogger.CreateNewLogger(prefix, "INFO", "unix-epoch")
+	tmpLogger := goRouterLogger.CreateNewLogger("INFO", "unix-epoch")
 
 	c, err := config.DefaultConfig()
 	if err != nil {
@@ -69,13 +70,19 @@ func main() {
 			tmpLogger.Error("Error loading config:", goRouterLogger.ErrAttr(err))
 		}
 	}
-	tmpLogger.Info("Shit works", slog.String("owner", "me"), slog.Bool("isGreat", true), slog.Int("howLarge", 42))
 	logCounter := schema.NewLogCounter()
 
 	if c.Logging.Syslog != "" {
 		prefix = c.Logging.Syslog
 	}
-	logger := goRouterLogger.CreateNewLogger(prefix, c.Logging.Level, c.Logging.Format.Timestamp)
+
+	type WriteSyncer interface {
+		io.Writer
+		Sync() error
+	}
+
+	coreLogger := goRouterLogger.CreateNewLogger(c.Logging.Level, c.Logging.Format.Timestamp)
+	logger := coreLogger.With(slog.String("source", prefix))
 	logger.Info("starting")
 	logger.Debug("local-az-set", slog.String("AvailabilityZone", c.Zone))
 
@@ -113,7 +120,7 @@ func main() {
 
 	logger.Info("setting-up-nats-connection")
 	natsReconnected := make(chan mbus.Signal)
-	natsClient := mbus.Connect(c, natsReconnected, goRouterLogger.AppendSource(logger, prefix, "nats"))
+	natsClient := mbus.Connect(c, natsReconnected, goRouterLogger.AppendSource(coreLogger, prefix, "nats"))
 
 	var routingAPIClient routing_api.Client
 
@@ -131,8 +138,8 @@ func main() {
 	sender := metric_sender.NewMetricSender(dropsonde.AutowiredEmitter())
 
 	metricsReporter := initializeMetrics(sender, c)
-	fdMonitor := initializeFDMonitor(sender, goRouterLogger.AppendSource(logger, prefix, "FileDescriptor"))
-	registry := rregistry.NewRouteRegistry(goRouterLogger.AppendSource(logger, prefix, "registry"), c, metricsReporter)
+	fdMonitor := initializeFDMonitor(sender, goRouterLogger.AppendSource(coreLogger, prefix, "FileDescriptor"))
+	registry := rregistry.NewRouteRegistry(goRouterLogger.AppendSource(coreLogger, prefix, "registry"), c, metricsReporter)
 	if c.SuspendPruningIfNatsUnavailable {
 		registry.SuspendPruning(func() bool { return !(natsClient.Status() == nats.CONNECTED) })
 	}
@@ -141,7 +148,7 @@ func main() {
 	compositeReporter := &metrics.CompositeReporter{VarzReporter: varz, ProxyReporter: metricsReporter}
 
 	accessLogger, err := accesslog.CreateRunningAccessLogger(
-		goRouterLogger.AppendSource(logger, prefix, "access-log"),
+		goRouterLogger.AppendSource(coreLogger, prefix, "access-log"),
 		accesslog.NewLogSender(c, dropsonde.AutowiredEmitter(), logger),
 		c,
 	)
@@ -160,7 +167,7 @@ func main() {
 	}
 
 	routeServiceConfig := routeservice.NewRouteServiceConfig(
-		goRouterLogger.AppendSource(logger, prefix, "proxy"),
+		goRouterLogger.AppendSource(coreLogger, prefix, "proxy"),
 		c.RouteServiceEnabled,
 		c.RouteServicesHairpinning,
 		c.RouteServicesHairpinningAllowlist,
@@ -219,7 +226,7 @@ func main() {
 	var errorChannel chan error = nil
 
 	goRouter, err := router.NewRouter(
-		goRouterLogger.AppendSource(logger, prefix, "router"),
+		goRouterLogger.AppendSource(coreLogger, prefix, "router"),
 		c,
 		proxy,
 		natsClient,
@@ -241,12 +248,12 @@ func main() {
 	members := grouper.Members{}
 
 	if c.RoutingApiEnabled() {
-		routeFetcher := setupRouteFetcher(goRouterLogger.AppendSource(logger, prefix, "route-fetcher"), c, registry, routingAPIClient)
+		routeFetcher := setupRouteFetcher(goRouterLogger.AppendSource(coreLogger, prefix, "route-fetcher"), c, registry, routingAPIClient)
 		members = append(members, grouper.Member{Name: "router-fetcher", Runner: routeFetcher})
 	}
 
-	subscriber := mbus.NewSubscriber(natsClient, registry, c, natsReconnected, goRouterLogger.AppendSource(logger, prefix, "subscriber"))
-	natsMonitor := initializeNATSMonitor(subscriber, sender, goRouterLogger.AppendSource(logger, prefix, "NATSMonitor"))
+	subscriber := mbus.NewSubscriber(natsClient, registry, c, natsReconnected, goRouterLogger.AppendSource(coreLogger, prefix, "subscriber"))
+	natsMonitor := initializeNATSMonitor(subscriber, sender, goRouterLogger.AppendSource(coreLogger, prefix, "NATSMonitor"))
 
 	members = append(members, grouper.Member{Name: "fdMonitor", Runner: fdMonitor})
 	members = append(members, grouper.Member{Name: "subscriber", Runner: subscriber})
