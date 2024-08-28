@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"sync"
 
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	logger "code.cloudfoundry.org/gorouter/logger"
 	"go.uber.org/zap"
 )
 

@@ -36,7 +36,7 @@ func NewTestZapLogger(component string) *TestZapLogger {
 		Buffer: gbytes.NewBuffer(),
 	}
 
-	testLogger := goRouterLogger.CreateNewLoggerWithWriteSyncer(
+	testLogger := goRouterLogger.CreateNewLogger(
 		"DEBUG",
 		"unix-epoch",
 		zapcore.NewMultiWriteSyncer(sink, zapcore.AddSync(ginkgo.GinkgoWriter)),

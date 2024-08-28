@@ -1,191 +1,181 @@
 package logger_test
 
 import (
-	"fmt"
+	"errors"
+	"log/slog"
 
+	"go.uber.org/zap/zapcore"
+
+	log "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/test_util"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
-	"go.uber.org/zap"
 )
 
-// Zap defaults to Info Level
 var _ = Describe("Logger", func() {
-	var logger Logger
+	var logger *slog.Logger
 	var testSink *test_util.TestZapSink
-
-	var component = "my-component"
 	var action = "my-action"
-	var testField = slog.String("new-key", "new-value")
 
 	BeforeEach(func() {
 		testSink = &test_util.TestZapSink{Buffer: gbytes.NewBuffer()}
-		logger = NewLogger(
-			component,
-			"unix-epoch",
-			zap.DebugLevel,
-			zap.Output(zap.MultiWriteSyncer(testSink, zap.AddSync(GinkgoWriter))),
-			zap.ErrorOutput(zap.MultiWriteSyncer(testSink, zap.AddSync(GinkgoWriter))))
+		logger = log.CreateNewLogger(
+			"INFO",
+			"",
+			zapcore.NewMultiWriteSyncer(testSink, zapcore.AddSync(GinkgoWriter)))
 	})
 
-	Describe("Session", func() {
-		Context("when configured to use unix epoch formatting", func() {
-			Context("when session is originally called", func() {
-				BeforeEach(func() {
-					logger = logger.Session("my-subcomponent")
-					logger.Info(action)
-				})
+	Describe("CreateNewLogger", func() {
+		Context("when timestampFormat is omitted", func() {
+			It("outputs a properly-formatted message with epoch timestamp", func() {
+				logger.Info(action)
+				Expect(testSink.Lines()).To(HaveLen(1))
 
-				It("outputs a properly-formatted message with human readable timestamp", func() {
-					Expect(testSink.Lines()).To(HaveLen(1))
-
-					Expect(testSink.Lines()[0]).To(MatchRegexp(
-						`{"log_level":[0-9]*,"timestamp":[0-9]+[.][0-9]+,"message":"%s","source":"my-component.my-subcomponent".*}`,
-						action,
-					))
-				})
-			})
-
-			Context("when session is called multiple times", func() {
-				BeforeEach(func() {
-					logger = logger.Session("my-sub-subcomponent")
-					logger.Info(action)
-				})
-
-				It("outputs a properly-formatted message with human readable timestamp", func() {
-					Expect(testSink.Lines()).To(HaveLen(1))
-
-					Expect(testSink.Lines()[0]).To(MatchRegexp(
-						`{"log_level":[0-9]*,"timestamp":[0-9]+[.][0-9]+,"message":"%s","source":"my-component.my-sub-subcomponent".*}`,
-						action,
-					))
-				})
+				Expect(testSink.Lines()[0]).To(MatchRegexp(
+					`{"log_level":[0-9]*,"timestamp":[0-9]+[.][0-9]+,"message":"%s"}`,
+					action,
+				))
 			})
 		})
 
-		Context("when configured to use RFC3339 formatting", func() {
+		Context("when timestampFormat is omitted", func() {
 			BeforeEach(func() {
-				testSink = &test_util.TestZapSink{Buffer: gbytes.NewBuffer()}
-				logger = NewLogger(
-					component,
+				logger = log.CreateNewLogger(
+					"info",
 					"rfc3339",
-					zap.DebugLevel,
-					zap.Output(zap.MultiWriteSyncer(testSink, zap.AddSync(GinkgoWriter))),
-					zap.ErrorOutput(zap.MultiWriteSyncer(testSink, zap.AddSync(GinkgoWriter))))
+					zapcore.NewMultiWriteSyncer(testSink, zapcore.AddSync(GinkgoWriter)))
 			})
 
-			Context("when session is originally called", func() {
-				BeforeEach(func() {
-					logger = logger.Session("my-subcomponent")
-					logger.Info(action)
-				})
+			It("outputs a properly-formatted message with rfc3339 timestamp", func() {
+				logger.Info(action)
+				Expect(testSink.Lines()).To(HaveLen(1))
 
-				It("outputs a properly-formatted message with human readable timestamp", func() {
-					Expect(testSink.Lines()).To(HaveLen(1))
-
-					Expect(testSink.Lines()[0]).To(MatchRegexp(
-						`{"log_level":[0-9]*,"timestamp":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{9}Z","message":"%s","source":"my-component.my-subcomponent".*}`,
-						action,
-					))
-				})
+				Expect(testSink.Lines()[0]).To(MatchRegexp(
+					`{"log_level":[0-9]*,"timestamp":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{9}Z","message":"%s"}`,
+					action,
+				))
 			})
+		})
 
-			Context("when session is called multiple times", func() {
-				BeforeEach(func() {
-					logger = logger.Session("my-sub-subcomponent")
-					logger.Info(action)
-				})
+		Context("when logs at different levels are written", func() {
+			It("outputs log messages with correct numeric 'log_level' value according to 'numberLevelFormatter'", func() {
+				log.DynamicLoggingConfig.SetLoggingLevel("Debug")
+				logger.Debug("debug")
+				logger.Info("info")
+				logger.Warn("warn")
+				logger.Error("error")
 
-				It("outputs a properly-formatted message with human readable timestamp", func() {
-					Expect(testSink.Lines()).To(HaveLen(1))
+				Expect(testSink.Lines()).To(HaveLen(4))
+				Expect(testSink.Lines()[0]).To(MatchRegexp(
+					`{"log_level":0,"timestamp":[0-9]+[.][0-9]+,"message":"debug"}`,
+				))
+				Expect(testSink.Lines()[1]).To(MatchRegexp(
+					`{"log_level":1,"timestamp":[0-9]+[.][0-9]+,"message":"info"}`,
+				))
+				Expect(testSink.Lines()[2]).To(MatchRegexp(
+					`{"log_level":2,"timestamp":[0-9]+[.][0-9]+,"message":"warn"}`,
+				))
+				Expect(testSink.Lines()[3]).To(MatchRegexp(
+					`{"log_level":3,"timestamp":[0-9]+[.][0-9]+,"message":"error"}`,
+				))
+			})
+		})
 
-					Expect(testSink.Lines()[0]).To(MatchRegexp(
-						`{"log_level":[0-9]*,"timestamp":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{9}Z","message":"%s","source":"my-component.my-sub-subcomponent".*}`,
-						action,
-					))
-				})
+	})
+
+	Describe("SetTimeEncoder", func() {
+		Context("when timestampFormat is set to rfc3339", func() {
+			It("outputs a properly-formatted message with RFC3339 timestamp", func() {
+				log.DynamicLoggingConfig.SetTimeEncoder("rfc3339")
+				logger.Info(action)
+				Expect(testSink.Lines()).To(HaveLen(1))
+
+				Expect(testSink.Lines()[0]).To(MatchRegexp(
+					`{"log_level":[0-9]*,"timestamp":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{9}Z","message":"%s"}`,
+					action,
+				))
 			})
 		})
 	})
 
-	Describe("SessionName", func() {
-		Context("when session has never been called", func() {
-			It("returns the original component", func() {
-				Expect(logger.SessionName()).To(Equal(component))
+	Describe("SetLoggingLevel", func() {
+		Context("when logLevel is set to Info", func() {
+			It("only outputs log messages with level Info and above", func() {
+				log.DynamicLoggingConfig.SetLoggingLevel("Info")
+				logger.Info("this-info-is-logged")
+				logger.Debug("this-debug-is-not-logged")
+
+				Expect(testSink.Lines()).To(HaveLen(1))
+				Expect(testSink.Lines()[0]).To(MatchRegexp(
+					`{"log_level":[0-9]*,"timestamp":[0-9]+[.][0-9]+,"message":"this-info-is-logged"}`,
+				))
 			})
 		})
 
-		Context("when session has been called", func() {
-			var subcomponent = "my-subcomponent"
-			BeforeEach(func() {
-				logger = logger.Session(subcomponent)
-			})
+		Context("when logLevel is set to Debug", func() {
+			It("outputs log messages with level Debug and above", func() {
+				log.DynamicLoggingConfig.SetLoggingLevel("Debug")
+				logger.Info("this-info-is-logged")
+				logger.Debug("this-debug-is-logged")
 
-			It("returns the current session", func() {
-				var sessionName = component + "." + subcomponent
-				Expect(logger.SessionName()).To(Equal(sessionName))
+				Expect(testSink.Lines()).To(HaveLen(2))
+				Expect(testSink.Lines()[0]).To(MatchRegexp(
+					`{"log_level":[0-9]*,"timestamp":[0-9]+[.][0-9]+,"message":"this-info-is-logged"}`,
+				))
+				Expect(testSink.Lines()[1]).To(MatchRegexp(
+					`{"log_level":[0-9]*,"timestamp":[0-9]+[.][0-9]+,"message":"this-debug-is-logged"}`,
+				))
 			})
 		})
 	})
 
-	Describe("With", func() {
-		BeforeEach(func() {
-			logger = logger.With(testField)
-			logger.Info(action)
-		})
+	Describe("ErrAttr", func() {
+		Context("when appending an error created by ErrAttr ", func() {
+			It("outputs log messages with 'error' attribute", func() {
+				err := errors.New("this-is-an-error")
+				logger.Error(action, log.ErrAttr(err))
 
-		It("returns a logger that adds that field to every log line", func() {
-			Expect(testSink.Lines()).To(HaveLen(1))
-			Expect(testSink.Lines()[0]).To(MatchRegexp(`{.*"data":{"new-key":"new-value"}}`))
+				Expect(testSink.Lines()).To(HaveLen(1))
+				Expect(testSink.Lines()[0]).To(MatchRegexp(
+					`{"log_level":3,"timestamp":[0-9]+[.][0-9]+,"message":"%s","error":"%s"}`, action, err.Error(),
+				))
+			})
 		})
+	})
 
-		Context("when Session is called with the new Logger", func() {
+	Describe("AppendSource", func() {
+		Context("when a source attribute is added via AppendSource", func() {
 			BeforeEach(func() {
-				logger = logger.Session("session-id")
+				logger = log.AppendSource(logger, "my-component", "my-subcomponent")
 				logger.Info(action)
 			})
-			It("has only one source key in the log, with the context added from the call to With", func() {
-				Expect(testSink.Lines()).To(HaveLen(2))
-				Expect(testSink.Lines()[1]).To(MatchRegexp(`{.*"data":{.*"new-key":"new-value".*}`))
-				Expect(testSink.Lines()[1]).To(MatchRegexp(`{.*"source":"my-component.session-id".*}`))
+
+			It("outputs log messages with source attribute", func() {
+				Expect(testSink.Lines()).To(HaveLen(1))
+				Expect(testSink.Lines()[0]).To(MatchRegexp(
+					`{"log_level":[0-9]*,"timestamp":[0-9]+[.][0-9]+,"message":"%s","source":"my-component.my-subcomponent"}`,
+					action,
+				))
+			})
+		})
+
+	})
+
+	Describe("Panic", func() {
+		Context("when an error is logged with 'Panic'", func() {
+
+			It("outputs an error log message and panics", func() {
+				Expect(func() { log.Panic(logger, action) }).To(Panic())
+
+				Expect(testSink.Lines()).To(HaveLen(1))
+				Expect(testSink.Lines()[0]).To(MatchRegexp(
+					`{"log_level":3,"timestamp":[0-9]+[.][0-9]+,"message":"%s"`,
+					action,
+				))
 			})
 		})
 	})
 
-	Describe("Log", func() {
-		It("formats the log line correctly", func() {
-			logger.Log(zap.InfoLevel, action, testField)
-			Expect(testSink.Lines()).To(HaveLen(1))
-			Expect(testSink.Lines()[0]).To(MatchRegexp(fmt.Sprintf(`{.*"message":"%s".*}`, action)))
-			Expect(testSink.Lines()[0]).To(MatchRegexp(`{.*"log_level":1.*}`))
-			Expect(testSink.Lines()[0]).To(MatchRegexp(`{.*"data":{"new-key":"new-value"}}`))
-		})
-	})
-	Describe("Debug", func() {
-		It("formats the log line correctly", func() {
-			logger.Debug(action, testField)
-			Expect(testSink.Lines()).To(HaveLen(1))
-			Expect(testSink.Lines()[0]).To(MatchRegexp(fmt.Sprintf(`{.*"message":"%s".*}`, action)))
-			Expect(testSink.Lines()[0]).To(MatchRegexp(`{.*"log_level":0.*}`))
-			Expect(testSink.Lines()[0]).To(MatchRegexp(`{.*"data":{"new-key":"new-value"}}`))
-		})
-	})
-	Describe("Info", func() {
-		It("formats the log line correctly", func() {
-			logger.Info(action, testField)
-			Expect(testSink.Lines()).To(HaveLen(1))
-			Expect(testSink.Lines()[0]).To(MatchRegexp(fmt.Sprintf(`{.*"message":"%s".*}`, action)))
-			Expect(testSink.Lines()[0]).To(MatchRegexp(`{.*"log_level":1.*}`))
-			Expect(testSink.Lines()[0]).To(MatchRegexp(`{.*"data":{"new-key":"new-value"}}`))
-		})
-	})
-	Describe("Warn", func() {
-		It("formats the log line correctly", func() {
-			logger.Warn(action, testField)
-			Expect(testSink.Lines()).To(HaveLen(1))
-			Expect(testSink.Lines()[0]).To(MatchRegexp(fmt.Sprintf(`{.*"message":"%s".*}`, action)))
-			Expect(testSink.Lines()[0]).To(MatchRegexp(`{.*"log_level":2.*}`))
-			Expect(testSink.Lines()[0]).To(MatchRegexp(`{.*"data":{"new-key":"new-value"}}`))
-		})
-	})
 })

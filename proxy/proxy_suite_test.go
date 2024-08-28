@@ -3,10 +3,13 @@ package proxy_test
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"strconv"
+	"testing"
+	"time"
 
 	"code.cloudfoundry.org/gorouter/common/health"
 
@@ -14,23 +17,20 @@ import (
 	"code.cloudfoundry.org/gorouter/common/secure"
 	"code.cloudfoundry.org/gorouter/config"
 	"code.cloudfoundry.org/gorouter/errorwriter"
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/proxy"
 	"code.cloudfoundry.org/gorouter/registry"
 	"code.cloudfoundry.org/gorouter/routeservice"
 	"code.cloudfoundry.org/gorouter/test_util"
 
-	"testing"
-	"time"
-
 	fake_registry "code.cloudfoundry.org/go-metric-registry/testhelpers"
-	fakelogsender "code.cloudfoundry.org/gorouter/accesslog/schema/fakes"
-	sharedfakes "code.cloudfoundry.org/gorouter/fakes"
-	"code.cloudfoundry.org/gorouter/metrics/fakes"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/emitter/fake"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	fakelogsender "code.cloudfoundry.org/gorouter/accesslog/schema/fakes"
+	sharedfakes "code.cloudfoundry.org/gorouter/fakes"
+	"code.cloudfoundry.org/gorouter/metrics/fakes"
 )
 
 //go:generate counterfeiter -o ../fakes/round_tripper.go --fake-name RoundTripper net/http.RoundTripper
@@ -46,7 +46,7 @@ var (
 	al                        accesslog.AccessLogger
 	ls                        *fakelogsender.FakeLogSender
 	crypto                    secure.Crypto
-	testLogger                logger.Logger
+	testLogger                slog.Logger
 	cryptoPrev                secure.Crypto
 	caCertPool                *x509.CertPool
 	recommendHTTPS            bool
