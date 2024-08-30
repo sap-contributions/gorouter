@@ -114,7 +114,8 @@ var _ = Describe("Proxy Unit tests", func() {
 							responseRecorder.EnableFullDuplexErr = errors.New("unsupported")
 							req := test_util.NewRequest("GET", "some-app", "/", bytes.NewReader([]byte("some-body")))
 							proxyObj.ServeHTTP(resp, req)
-							Expect(testSink.Contents()).To(ContainSubstring("enable-full-duplex-err"))
+
+							Eventually(logger).Should(Say("enable-full-duplex-err"))
 						})
 					})
 				})

@@ -24,7 +24,9 @@ import (
 	uuid "github.com/nu7hatch/gouuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/openzipkin/zipkin-go/propagation/b3"
+	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/websocket"
 
@@ -1089,10 +1091,7 @@ var _ = Describe("Proxy", func() {
 			defer ln.Close()
 
 			process("hsts-test")
-
-			for _, s := range testSink.Lines() {
-				Expect(s).NotTo(ContainSubstring("http-rewrite"))
-			}
+			Expect(logger).NotTo(gbytes.Say("http-rewrite"))
 		})
 
 		Context("when add response header is set", func() {
@@ -1569,10 +1568,7 @@ var _ = Describe("Proxy", func() {
 
 			resp, _ := conn.ReadResponse()
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
-			Expect(testSink.Lines()[0]).To(MatchRegexp(
-				`{"log_level":[0-9]*,"timestamp":[0-9]+[.][0-9]+,"message":"route-registered","data":{"uri":"query-param-test"}}`,
-				//TODO: FIX THIS
-			))
+			Expect(logger.Lines(zap.WarnLevel)).To(ContainElement(ContainSubstring("deprecated-semicolon-params")))
 
 		})
 	})
