@@ -8,11 +8,12 @@ import (
 	"strings"
 	"time"
 
-	. "code.cloudfoundry.org/gorouter/config"
-	"code.cloudfoundry.org/gorouter/test_util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	yaml "gopkg.in/yaml.v2"
+
+	. "code.cloudfoundry.org/gorouter/config"
+	"code.cloudfoundry.org/gorouter/test_util"
 )
 
 var _ = Describe("Config", func() {
