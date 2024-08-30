@@ -24,7 +24,7 @@ import (
 	"code.cloudfoundry.org/gorouter/common/schema"
 	"code.cloudfoundry.org/gorouter/config"
 	"code.cloudfoundry.org/gorouter/handlers"
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/metrics/monitor"
 	"code.cloudfoundry.org/gorouter/registry"
 	"code.cloudfoundry.org/gorouter/varz"
@@ -243,7 +243,7 @@ func (r *Router) OnErrOrSignal(signals <-chan os.Signal, errChan chan error) {
 	select {
 	case err := <-errChan:
 		if err != nil {
-			r.logger.Error("Error occurred", goRouterLogger.ErrAttr(err))
+			r.logger.Error("Error occurred", log.ErrAttr(err))
 			r.health.SetHealth(health.Degraded)
 		}
 	case sig := <-signals:
@@ -309,7 +309,7 @@ func (r *Router) serveHTTPS(server *http.Server, errChan chan error) error {
 
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", r.config.SSLPort))
 	if err != nil {
-		r.logger.Error("tls-listener-error", goRouterLogger.ErrAttr(err))
+		r.logger.Error("tls-listener-error", log.ErrAttr(err))
 		return err
 	}
 
@@ -354,7 +354,7 @@ func (r *Router) serveHTTP(server *http.Server, errChan chan error) error {
 
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", r.config.Port))
 	if err != nil {
-		r.logger.Error("tcp-listener-error", goRouterLogger.ErrAttr(err))
+		r.logger.Error("tcp-listener-error", log.ErrAttr(err))
 		return err
 	}
 

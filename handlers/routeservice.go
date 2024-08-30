@@ -12,7 +12,7 @@ import (
 	"github.com/urfave/negroni/v3"
 
 	"code.cloudfoundry.org/gorouter/errorwriter"
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/registry"
 	"code.cloudfoundry.org/gorouter/routeservice"
 
@@ -37,7 +37,7 @@ func NewRouteService(
 	allowlistDomains, err := CreateDomainAllowlist(config.RouteServiceHairpinningAllowlist())
 
 	if err != nil {
-		logger.Error("allowlist-entry-invalid", goRouterLogger.ErrAttr(err))
+		logger.Error("allowlist-entry-invalid", log.ErrAttr(err))
 	}
 	return &RouteService{
 		config:                      config,
@@ -52,11 +52,11 @@ func (r *RouteService) ServeHTTP(rw http.ResponseWriter, req *http.Request, next
 	logger := LoggerWithTraceInfo(r.logger, req)
 	reqInfo, err := ContextRequestInfo(req)
 	if err != nil {
-		logger.Error("request-info-err", goRouterLogger.ErrAttr(err))
+		logger.Error("request-info-err", log.ErrAttr(err))
 		return
 	}
 	if reqInfo.RoutePool == nil {
-		logger.Error("request-info-err", goRouterLogger.ErrAttr(errors.New("failed-to-access-RoutePool")))
+		logger.Error("request-info-err", log.ErrAttr(errors.New("failed-to-access-RoutePool")))
 		return
 	}
 
@@ -120,7 +120,7 @@ func (r *RouteService) ServeHTTP(rw http.ResponseWriter, req *http.Request, next
 
 	hasBeenToRouteService, err := r.ArrivedViaRouteService(req, logger)
 	if err != nil {
-		logger.Error("signature-validation-failed", goRouterLogger.ErrAttr(err))
+		logger.Error("signature-validation-failed", log.ErrAttr(err))
 		if errors.Is(err, routeservice.ErrExpired) {
 			r.errorWriter.WriteError(
 				rw,
@@ -158,7 +158,7 @@ func (r *RouteService) ServeHTTP(rw http.ResponseWriter, req *http.Request, next
 	forwardedURLRaw := recommendedScheme + "://" + hostWithoutPort(req.Host) + req.RequestURI
 	routeServiceArgs, err := r.config.CreateRequest(routeServiceURL, forwardedURLRaw)
 	if err != nil {
-		logger.Error("route-service-failed", goRouterLogger.ErrAttr(err))
+		logger.Error("route-service-failed", log.ErrAttr(err))
 
 		r.errorWriter.WriteError(
 			rw,
@@ -290,12 +290,12 @@ func (r *RouteService) IsRouteServiceTraffic(req *http.Request) bool {
 func (r *RouteService) ArrivedViaRouteService(req *http.Request, logger *slog.Logger) (bool, error) {
 	reqInfo, err := ContextRequestInfo(req)
 	if err != nil {
-		logger.Error("request-info-err", goRouterLogger.ErrAttr(err))
+		logger.Error("request-info-err", log.ErrAttr(err))
 		return false, err
 	}
 	if reqInfo.RoutePool == nil {
 		err = errors.New("failed-to-access-RoutePool")
-		logger.Error("request-info-err", goRouterLogger.ErrAttr(err))
+		logger.Error("request-info-err", log.ErrAttr(err))
 		return false, err
 	}
 

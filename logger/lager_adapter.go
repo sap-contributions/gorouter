@@ -17,17 +17,15 @@ const (
 
 // LagerAdapter tbd
 type LagerAdapter struct {
-	logger         *slog.Logger
-	originalLogger *slog.Logger
-	source         string
+	logger *slog.Logger
+	source string
 }
 
 // NewLagerAdapter returns a new lager.Logger that uses slog with a zap handler underneath.
-func NewLagerAdapter(logger *slog.Logger, source string) *LagerAdapter {
+func NewLagerAdapter(source string) *LagerAdapter {
 	lagerAdapter := &LagerAdapter{
-		source:         source,
-		logger:         logger.With("source", source),
-		originalLogger: logger,
+		source: source,
+		logger: CreateLoggerWithSource(source, ""),
 	}
 	return lagerAdapter
 }
@@ -39,22 +37,15 @@ func (l *LagerAdapter) RegisterSink(_ lager.Sink) {
 
 // Session returns a new logger with a nested source and optional data.
 func (l *LagerAdapter) Session(task string, data ...lager.Data) lager.Logger {
-	if len(l.source) == 0 {
-		l.source = task
-	} else {
-		l.source = l.source + "." + task
-	}
-
-	logger := l.originalLogger.With("source", l.source)
+	logger := CreateLoggerWithSource(l.source, task)
 
 	if data != nil {
 		logger = logger.With(dataToFields(data)...)
 	}
 
 	return &LagerAdapter{
-		logger:         logger,
-		originalLogger: l.originalLogger,
-		source:         l.source,
+		logger: logger,
+		source: l.source + "." + task,
 	}
 }
 

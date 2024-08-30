@@ -5,7 +5,7 @@ import (
 	"github.com/onsi/gomega/gbytes"
 	"go.uber.org/zap/zapcore"
 
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/test_util"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -14,57 +14,86 @@ import (
 
 var _ = Describe("LagerAdapter", func() {
 	var (
+		testSink     *test_util.TestSink
+		prefix       = "my-prefix"
+		component    = "my-component"
+		subcomponent = "my-subcomponent"
+		message      = "my-message"
+		logKey       = "my-key"
+		logValue     = "my-value"
 		lagerLogger  lager.Logger
-		testSink     *test_util.TestZapSink
-		sourcePrefix string
 	)
 
 	BeforeEach(func() {
-		sourcePrefix = "gorouter"
-		testSink = &test_util.TestZapSink{Buffer: gbytes.NewBuffer()}
-		slogLogger := goRouterLogger.CreateNewLogger("DEBUG", "", zapcore.NewMultiWriteSyncer(testSink, zapcore.AddSync(GinkgoWriter)))
-		lagerLogger = goRouterLogger.NewLagerAdapter(slogLogger, sourcePrefix)
+		testSink = &test_util.TestSink{Buffer: gbytes.NewBuffer()}
+		log.SetLoggingLevel("DEBUG")
+		log.SetDynamicWriteSyncer(zapcore.NewMultiWriteSyncer(testSink, zapcore.AddSync(GinkgoWriter)))
+		lagerLogger = log.NewLagerAdapter(prefix)
+
+	})
+
+	Describe("NewLagerAdapter", func() {
+		Context("when logging messages with data", func() {
+			It("adds outputs a properly formatted message", func() {
+				lagerLogger.Info(message, lager.Data{logKey: logValue})
+				Expect(testSink.Lines()).To(HaveLen(1))
+				Expect(testSink.Lines()[0]).To(MatchRegexp(
+					`{"log_level":[0-9]*,"timestamp":[0-9]+[.][0-9]+,"message":"%s","source":"%s","data":{"%s":"%s"}}`,
+					message,
+					prefix,
+					logKey,
+					logValue,
+				))
+			})
+		})
 	})
 
 	Describe("Session", func() {
-		Context("when multiple sessions are appended", func() {
-			var sessionString1 = "component"
-			var sessionString2 = "subcomponent"
-			var message = "some-action"
-			It("adds the concatenated sessions as source", func() {
-				lagerLogger = lagerLogger.Session(sessionString1)
-				lagerLogger = lagerLogger.Session(sessionString2)
+		Context("when calling Session oce", func() {
+			It("adds the components as 'source' to the log's root", func() {
+				lagerLogger = lagerLogger.Session(component)
 				lagerLogger.Info(message)
-
 				Expect(testSink.Lines()).To(HaveLen(1))
 				Expect(testSink.Lines()[0]).To(MatchRegexp(
-					`{"log_level":[0-9]*,"timestamp":[0-9]+[.][0-9]+,"message":"%s","source":"%s[.]%s[.]%s"}`,
+					`{"log_level":[0-9]*,"timestamp":[0-9]+[.][0-9]+,"message":"%s","source":"%s.%s","data":{}}`,
 					message,
-					sourcePrefix,
-					sessionString1,
-					sessionString2,
+					prefix,
+					component,
 				))
-
 			})
 		})
 
-		Context("when a session with data is appended", func() {
-			var sessionString1 = "component"
-			var message = "some-action"
-			It("adds the session and data", func() {
-				lagerLogger = lagerLogger.Session(sessionString1, lager.Data{"foo": "bar", "bar": "baz"})
+		Context("when calling Session multiple times", func() {
+			It("adds the concatenated components as 'source' to the log's root", func() {
+				lagerLogger = lagerLogger.Session(component)
+				lagerLogger = lagerLogger.Session(subcomponent)
 				lagerLogger.Info(message)
-
 				Expect(testSink.Lines()).To(HaveLen(1))
 				Expect(testSink.Lines()[0]).To(MatchRegexp(
-					`{"log_level":[0-9]*,"timestamp":[0-9]+[.][0-9]+,"message":"%s","source":"%s[.]%s","foo":"bar","bar":"baz"}`,
+					`{"log_level":[0-9]*,"timestamp":[0-9]+[.][0-9]+,"message":"%s","source":"%s.%s.%s","data":{}}`,
 					message,
-					sourcePrefix,
-					sessionString1,
+					prefix,
+					component,
+					subcomponent,
 				))
-
 			})
 		})
 
+		Context("when calling Session with data", func() {
+			It("adds the component as 'source' to the log's root, and provided data to the 'data' field", func() {
+				lagerLogger = lagerLogger.Session(component, lager.Data{logKey: logValue})
+				lagerLogger.Info(message)
+				Expect(testSink.Lines()).To(HaveLen(1))
+				Expect(testSink.Lines()[0]).To(MatchRegexp(
+					`{"log_level":[0-9]*,"timestamp":[0-9]+[.][0-9]+,"message":"%s","source":"%s.%s","data":{"%s":"%s"}}`,
+					message,
+					prefix,
+					component,
+					logKey,
+					logValue,
+				))
+			})
+		})
 	})
+
 })

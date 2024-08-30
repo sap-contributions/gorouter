@@ -24,7 +24,7 @@ var _ = Describe("RouteRegistry", func() {
 
 	var fooEndpoint, barEndpoint, bar2Endpoint *route.Endpoint
 	var configObj *config.Config
-	var logger *slog.Logger
+	var logger *test_util.TestLogger
 
 	var azPreference, az string
 
@@ -32,7 +32,7 @@ var _ = Describe("RouteRegistry", func() {
 		azPreference = "none"
 		az = "meow-zone"
 
-		logger = test_util.NewTestZapLogger("test")
+		logger = test_util.NewTestLogger("test")
 		var err error
 		configObj, err = config.DefaultConfig()
 		Expect(err).ToNot(HaveOccurred())
@@ -43,7 +43,7 @@ var _ = Describe("RouteRegistry", func() {
 
 		reporter = new(fakes.FakeRouteRegistryReporter)
 
-		r = NewRouteRegistry(logger, configObj, reporter)
+		r = NewRouteRegistry(logger.Logger, configObj, reporter)
 		fooEndpoint = route.NewEndpoint(&route.EndpointOpts{
 			Host: "192.168.1.1",
 			Tags: map[string]string{
@@ -282,7 +282,7 @@ var _ = Describe("RouteRegistry", func() {
 			Context("when routing table sharding mode is `segments`", func() {
 				BeforeEach(func() {
 					configObj.RoutingTableShardingMode = config.SHARD_SEGMENTS
-					r = NewRouteRegistry(logger, configObj, reporter)
+					r = NewRouteRegistry(logger.Logger, configObj, reporter)
 					fooEndpoint.IsolationSegment = "foo"
 					barEndpoint.IsolationSegment = "bar"
 					bar2Endpoint.IsolationSegment = "baz"
@@ -320,7 +320,7 @@ var _ = Describe("RouteRegistry", func() {
 			Context("when routing table sharding mode is `shared-and-segments`", func() {
 				BeforeEach(func() {
 					configObj.RoutingTableShardingMode = config.SHARD_SHARED_AND_SEGMENTS
-					r = NewRouteRegistry(logger, configObj, reporter)
+					r = NewRouteRegistry(logger.Logger, configObj, reporter)
 					fooEndpoint.IsolationSegment = "foo"
 					barEndpoint.IsolationSegment = "bar"
 					bar2Endpoint.IsolationSegment = "baz"
@@ -373,7 +373,7 @@ var _ = Describe("RouteRegistry", func() {
 					Expect(r.NumEndpoints()).To(Equal(1))
 
 					p := r.Lookup("foo.com")
-					Expect(p.Endpoints(logger, "", false, azPreference, az).Next(0).ModificationTag).To(Equal(modTag))
+					Expect(p.Endpoints(logger.Logger, "", false, azPreference, az).Next(0).ModificationTag).To(Equal(modTag))
 				})
 			})
 
@@ -395,7 +395,7 @@ var _ = Describe("RouteRegistry", func() {
 						Expect(r.NumEndpoints()).To(Equal(1))
 
 						p := r.Lookup("foo.com")
-						Expect(p.Endpoints(logger, "", false, azPreference, az).Next(0).ModificationTag).To(Equal(modTag))
+						Expect(p.Endpoints(logger.Logger, "", false, azPreference, az).Next(0).ModificationTag).To(Equal(modTag))
 					})
 
 					Context("updating an existing route with an older modification tag", func() {
@@ -415,7 +415,7 @@ var _ = Describe("RouteRegistry", func() {
 							Expect(r.NumEndpoints()).To(Equal(1))
 
 							p := r.Lookup("foo.com")
-							ep := p.Endpoints(logger, "", false, azPreference, az).Next(0)
+							ep := p.Endpoints(logger.Logger, "", false, azPreference, az).Next(0)
 							Expect(ep.ModificationTag).To(Equal(modTag))
 							Expect(ep).To(Equal(endpoint2))
 						})
@@ -434,7 +434,7 @@ var _ = Describe("RouteRegistry", func() {
 						Expect(r.NumEndpoints()).To(Equal(1))
 
 						p := r.Lookup("foo.com")
-						Expect(p.Endpoints(logger, "", false, azPreference, az).Next(0).ModificationTag).To(Equal(modTag))
+						Expect(p.Endpoints(logger.Logger, "", false, azPreference, az).Next(0).ModificationTag).To(Equal(modTag))
 					})
 				})
 			})
@@ -669,7 +669,7 @@ var _ = Describe("RouteRegistry", func() {
 		Context("when routing table sharding mode is `segments`", func() {
 			BeforeEach(func() {
 				configObj.RoutingTableShardingMode = config.SHARD_SEGMENTS
-				r = NewRouteRegistry(logger, configObj, reporter)
+				r = NewRouteRegistry(logger.Logger, configObj, reporter)
 				fooEndpoint.IsolationSegment = "foo"
 				barEndpoint.IsolationSegment = "bar"
 				bar2Endpoint.IsolationSegment = "bar"
@@ -715,7 +715,7 @@ var _ = Describe("RouteRegistry", func() {
 		Context("when routing table sharding mode is `shared-and-segments`", func() {
 			BeforeEach(func() {
 				configObj.RoutingTableShardingMode = config.SHARD_SHARED_AND_SEGMENTS
-				r = NewRouteRegistry(logger, configObj, reporter)
+				r = NewRouteRegistry(logger.Logger, configObj, reporter)
 				fooEndpoint.IsolationSegment = "foo"
 				barEndpoint.IsolationSegment = "bar"
 				bar2Endpoint.IsolationSegment = "bar"
@@ -777,7 +777,7 @@ var _ = Describe("RouteRegistry", func() {
 			Expect(r.NumUris()).To(Equal(1))
 
 			p1 := r.Lookup("foo/bar")
-			iter := p1.Endpoints(logger, "", false, azPreference, az)
+			iter := p1.Endpoints(logger.Logger, "", false, azPreference, az)
 			Expect(iter.Next(0).CanonicalAddr()).To(Equal("192.168.1.1:1234"))
 
 			p2 := r.Lookup("foo")
@@ -873,7 +873,7 @@ var _ = Describe("RouteRegistry", func() {
 			p2 := r.Lookup("FOO")
 			Expect(p1).To(Equal(p2))
 
-			iter := p1.Endpoints(logger, "", false, azPreference, az)
+			iter := p1.Endpoints(logger.Logger, "", false, azPreference, az)
 			Expect(iter.Next(0).CanonicalAddr()).To(Equal("192.168.1.1:1234"))
 		})
 
@@ -892,7 +892,7 @@ var _ = Describe("RouteRegistry", func() {
 
 			p := r.Lookup("bar")
 			Expect(p).ToNot(BeNil())
-			e := p.Endpoints(logger, "", false, azPreference, az).Next(0)
+			e := p.Endpoints(logger.Logger, "", false, azPreference, az).Next(0)
 			Expect(e).ToNot(BeNil())
 			Expect(e.CanonicalAddr()).To(MatchRegexp("192.168.1.1:123[4|5]"))
 
@@ -907,13 +907,13 @@ var _ = Describe("RouteRegistry", func() {
 
 			p := r.Lookup("foo.wild.card")
 			Expect(p).ToNot(BeNil())
-			e := p.Endpoints(logger, "", false, azPreference, az).Next(0)
+			e := p.Endpoints(logger.Logger, "", false, azPreference, az).Next(0)
 			Expect(e).ToNot(BeNil())
 			Expect(e.CanonicalAddr()).To(Equal("192.168.1.2:1234"))
 
 			p = r.Lookup("foo.space.wild.card")
 			Expect(p).ToNot(BeNil())
-			e = p.Endpoints(logger, "", false, azPreference, az).Next(0)
+			e = p.Endpoints(logger.Logger, "", false, azPreference, az).Next(0)
 			Expect(e).ToNot(BeNil())
 			Expect(e.CanonicalAddr()).To(Equal("192.168.1.2:1234"))
 		})
@@ -927,7 +927,7 @@ var _ = Describe("RouteRegistry", func() {
 
 			p := r.Lookup("not.wild.card")
 			Expect(p).ToNot(BeNil())
-			e := p.Endpoints(logger, "", false, azPreference, az).Next(0)
+			e := p.Endpoints(logger.Logger, "", false, azPreference, az).Next(0)
 			Expect(e).ToNot(BeNil())
 			Expect(e.CanonicalAddr()).To(Equal("192.168.1.1:1234"))
 		})
@@ -959,7 +959,7 @@ var _ = Describe("RouteRegistry", func() {
 				p := r.Lookup("dora.app.com/env?foo=bar")
 
 				Expect(p).ToNot(BeNil())
-				iter := p.Endpoints(logger, "", false, azPreference, az)
+				iter := p.Endpoints(logger.Logger, "", false, azPreference, az)
 				Expect(iter.Next(0).CanonicalAddr()).To(Equal("192.168.1.1:1234"))
 			})
 
@@ -968,7 +968,7 @@ var _ = Describe("RouteRegistry", func() {
 				p := r.Lookup("dora.app.com/env/abc?foo=bar&baz=bing")
 
 				Expect(p).ToNot(BeNil())
-				iter := p.Endpoints(logger, "", false, azPreference, az)
+				iter := p.Endpoints(logger.Logger, "", false, azPreference, az)
 				Expect(iter.Next(0).CanonicalAddr()).To(Equal("192.168.1.1:1234"))
 			})
 		})
@@ -988,7 +988,7 @@ var _ = Describe("RouteRegistry", func() {
 			p1 := r.Lookup("foo/extra/paths")
 			Expect(p1).ToNot(BeNil())
 
-			iter := p1.Endpoints(logger, "", false, azPreference, az)
+			iter := p1.Endpoints(logger.Logger, "", false, azPreference, az)
 			Expect(iter.Next(0).CanonicalAddr()).To(Equal("192.168.1.1:1234"))
 		})
 
@@ -1000,7 +1000,7 @@ var _ = Describe("RouteRegistry", func() {
 			p1 := r.Lookup("foo?fields=foo,bar")
 			Expect(p1).ToNot(BeNil())
 
-			iter := p1.Endpoints(logger, "", false, azPreference, az)
+			iter := p1.Endpoints(logger.Logger, "", false, azPreference, az)
 			Expect(iter.Next(0).CanonicalAddr()).To(Equal("192.168.1.1:1234"))
 		})
 
@@ -1036,7 +1036,7 @@ var _ = Describe("RouteRegistry", func() {
 			Expect(r.NumEndpoints()).To(Equal(2))
 
 			p := r.LookupWithInstance("bar.com/foo", appId, appIndex)
-			e := p.Endpoints(logger, "", false, azPreference, az).Next(0)
+			e := p.Endpoints(logger.Logger, "", false, azPreference, az).Next(0)
 
 			Expect(e).ToNot(BeNil())
 			Expect(e.CanonicalAddr()).To(MatchRegexp("192.168.1.1:1234"))
@@ -1050,7 +1050,7 @@ var _ = Describe("RouteRegistry", func() {
 			Expect(r.NumEndpoints()).To(Equal(2))
 
 			p := r.LookupWithInstance("bar.com/foo", appId, appIndex)
-			e := p.Endpoints(logger, "", false, azPreference, az).Next(0)
+			e := p.Endpoints(logger.Logger, "", false, azPreference, az).Next(0)
 
 			Expect(e).ToNot(BeNil())
 			Expect(e.CanonicalAddr()).To(MatchRegexp("192.168.1.1:1234"))
@@ -1243,7 +1243,7 @@ var _ = Describe("RouteRegistry", func() {
 
 			p := r.Lookup("foo")
 			Expect(p).ToNot(BeNil())
-			Expect(p.Endpoints(logger, "", false, azPreference, az).Next(0)).To(Equal(endpoint))
+			Expect(p.Endpoints(logger.Logger, "", false, azPreference, az).Next(0)).To(Equal(endpoint))
 
 			p = r.Lookup("bar")
 			Expect(p).To(BeNil())
@@ -1275,7 +1275,7 @@ var _ = Describe("RouteRegistry", func() {
 				reporter = new(fakes.FakeRouteRegistryReporter)
 				fooEndpoint.StaleThreshold = configObj.DropletStaleThreshold
 
-				r = NewRouteRegistry(logger, configObj, reporter)
+				r = NewRouteRegistry(logger.Logger, configObj, reporter)
 			})
 
 			It("sends route metrics to the reporter", func() {
@@ -1304,7 +1304,7 @@ var _ = Describe("RouteRegistry", func() {
 				configObj.DropletStaleThreshold = 1 * time.Second
 				reporter = new(fakes.FakeRouteRegistryReporter)
 
-				r = NewRouteRegistry(logger, configObj, reporter)
+				r = NewRouteRegistry(logger.Logger, configObj, reporter)
 			})
 
 			It("does not log the route info for fresh routes when pruning", func() {

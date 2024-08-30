@@ -15,7 +15,7 @@ import (
 	"code.cloudfoundry.org/gorouter/common"
 	"code.cloudfoundry.org/gorouter/common/uuid"
 	"code.cloudfoundry.org/gorouter/config"
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/registry"
 	"code.cloudfoundry.org/gorouter/route"
 	"code.cloudfoundry.org/routing-api/models"
@@ -122,7 +122,7 @@ func NewSubscriber(
 ) *Subscriber {
 	guid, err := uuid.GenerateUUID()
 	if err != nil {
-		l.Error("failed-to-generate-uuid", goRouterLogger.ErrAttr(err))
+		l.Error("failed-to-generate-uuid", log.ErrAttr(err))
 		os.Exit(1)
 	}
 
@@ -168,7 +168,7 @@ func (s *Subscriber) Run(signals <-chan os.Signal, ready chan<- struct{}) error 
 		case <-s.reconnected:
 			err := s.sendStartMessage()
 			if err != nil {
-				s.logger.Error("failed-to-send-start-message", goRouterLogger.ErrAttr(err))
+				s.logger.Error("failed-to-send-start-message", log.ErrAttr(err))
 			}
 		case <-signals:
 			s.logger.Info("exited")
@@ -211,7 +211,7 @@ func (s *Subscriber) subscribeRoutes() (*nats.Subscription, error) {
 		msg, regErr := createRegistryMessage(message.Data)
 		if regErr != nil {
 			s.logger.Error("validation-error",
-				goRouterLogger.ErrAttr(regErr),
+				log.ErrAttr(regErr),
 				slog.String("payload", string(message.Data)),
 				slog.String("subject", message.Subject),
 			)
@@ -243,7 +243,7 @@ func (s *Subscriber) registerEndpoint(msg *RegistryMessage) {
 	endpoint, err := msg.makeEndpoint(s.http2Enabled)
 	if err != nil {
 		s.logger.Error("Unable to register route",
-			goRouterLogger.ErrAttr(err),
+			log.ErrAttr(err),
 			slog.Any("message", msg),
 		)
 		return
@@ -258,7 +258,7 @@ func (s *Subscriber) unregisterEndpoint(msg *RegistryMessage) {
 	endpoint, err := msg.makeEndpoint(s.http2Enabled)
 	if err != nil {
 		s.logger.Error("Unable to unregister route",
-			goRouterLogger.ErrAttr(err),
+			log.ErrAttr(err),
 			slog.Any("message", msg),
 		)
 		return

@@ -11,7 +11,7 @@ import (
 
 	"github.com/urfave/negroni/v3"
 
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 )
 
 type reporterHandler struct {
@@ -35,7 +35,7 @@ func (rh *reporterHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request, ne
 	// logger.Panic does not cause gorouter to exit 1 but rather throw panic with
 	// stacktrace in error log
 	if err != nil {
-		logger.Error("request-info-err", goRouterLogger.ErrAttr(err))
+		logger.Error("request-info-err", log.ErrAttr(err))
 		return
 	}
 	if !validContentLength(r.Header) {

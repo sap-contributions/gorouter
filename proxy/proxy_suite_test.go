@@ -11,7 +11,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onsi/gomega/gbytes"
+	"go.uber.org/zap/zapcore"
+
 	"code.cloudfoundry.org/gorouter/common/health"
+	log "code.cloudfoundry.org/gorouter/logger"
 
 	"code.cloudfoundry.org/gorouter/accesslog"
 	"code.cloudfoundry.org/gorouter/common/secure"
@@ -46,7 +50,8 @@ var (
 	al                        accesslog.AccessLogger
 	ls                        *fakelogsender.FakeLogSender
 	crypto                    secure.Crypto
-	testLogger                slog.Logger
+	testSink                  *test_util.TestSink
+	logger                    *slog.Logger
 	cryptoPrev                secure.Crypto
 	caCertPool                *x509.CertPool
 	recommendHTTPS            bool
@@ -66,7 +71,10 @@ func TestProxy(t *testing.T) {
 var _ = BeforeEach(func() {
 	healthStatus = &health.Health{}
 	healthStatus.SetHealth(health.Healthy)
-	testLogger = test_util.NewTestZapLogger("test")
+	logger = log.CreateLogger()
+	testSink = &test_util.TestSink{Buffer: gbytes.NewBuffer()}
+	log.SetDynamicWriteSyncer(zapcore.NewMultiWriteSyncer(testSink, zapcore.AddSync(GinkgoWriter)))
+
 	var err error
 
 	crypto, err = secure.NewAesGCM([]byte("ABCDEFGHIJKLMNOP"))
@@ -92,7 +100,7 @@ var _ = BeforeEach(func() {
 
 var _ = JustBeforeEach(func() {
 	var err error
-	r = registry.NewRouteRegistry(testLogger, conf, new(fakes.FakeRouteRegistryReporter))
+	r = registry.NewRouteRegistry(logger, conf, new(fakes.FakeRouteRegistryReporter))
 
 	fakeEmitter = fake.NewFakeEventEmitter("fake")
 	dropsonde.InitializeWithEmitter(fakeEmitter)
@@ -101,7 +109,7 @@ var _ = JustBeforeEach(func() {
 	Expect(err).NotTo(HaveOccurred())
 	conf.AccessLog.File = f.Name()
 	ls = &fakelogsender.FakeLogSender{}
-	al, err = accesslog.CreateRunningAccessLogger(testLogger, ls, conf)
+	al, err = accesslog.CreateRunningAccessLogger(logger, ls, conf)
 	Expect(err).NotTo(HaveOccurred())
 	go al.Run()
 
@@ -118,7 +126,7 @@ var _ = JustBeforeEach(func() {
 	}
 
 	routeServiceConfig := routeservice.NewRouteServiceConfig(
-		testLogger,
+		logger,
 		conf.RouteServiceEnabled,
 		conf.RouteServicesHairpinning,
 		conf.RouteServicesHairpinningAllowlist,
@@ -141,7 +149,7 @@ var _ = JustBeforeEach(func() {
 
 	fakeRouteServicesClient = &sharedfakes.RoundTripper{}
 
-	p = proxy.NewProxy(testLogger, al, fakeRegistry, ew, conf, r, fakeReporter, routeServiceConfig, tlsConfig, tlsConfig, healthStatus, fakeRouteServicesClient)
+	p = proxy.NewProxy(logger, al, fakeRegistry, ew, conf, r, fakeReporter, routeServiceConfig, tlsConfig, tlsConfig, healthStatus, fakeRouteServicesClient)
 
 	if conf.EnableHTTP2 {
 		server := http.Server{Handler: p}

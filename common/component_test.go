@@ -31,9 +31,11 @@ var _ = Describe("Component", func() {
 	var (
 		component *VcapComponent
 		varz      *health.Varz
+		logger    *test_util.TestLogger
 	)
 
 	BeforeEach(func() {
+		logger = test_util.NewTestLogger("test")
 		port := test_util.NextAvailPort()
 
 		varz = &health.Varz{
@@ -48,7 +50,7 @@ var _ = Describe("Component", func() {
 	})
 
 	It("fails to start when the configured port is in use", func() {
-		component.Logger = test_util.NewTestZapLogger("test")
+		component.Logger = logger.Logger
 		component.Varz.Type = "TestType"
 
 		srv, err := net.Listen("tcp", varz.GenericVarz.Host)
@@ -164,15 +166,12 @@ var _ = Describe("Component", func() {
 	Describe("Register", func() {
 		var mbusClient *nats.Conn
 		var natsRunner *test_util.NATSRunner
-		var logger *slog.Logger
 
 		BeforeEach(func() {
 			natsPort := test_util.NextAvailPort()
 			natsRunner = test_util.NewNATSRunner(int(natsPort))
 			natsRunner.Start()
 			mbusClient = natsRunner.MessageBus
-
-			logger = test_util.NewTestZapLogger("test")
 		})
 
 		AfterEach(func() {
@@ -196,7 +195,7 @@ var _ = Describe("Component", func() {
 			}
 
 			component.Varz.Type = "TestType"
-			component.Logger = logger
+			component.Logger = logger.Logger
 
 			err := component.Start()
 			Expect(err).ToNot(HaveOccurred())
@@ -242,7 +241,7 @@ var _ = Describe("Component", func() {
 			}
 
 			component.Varz.Type = "TestType"
-			component.Logger = logger
+			component.Logger = logger.Logger
 
 			err := component.Start()
 			Expect(err).ToNot(HaveOccurred())
@@ -270,7 +269,7 @@ var _ = Describe("Component", func() {
 
 		It("can handle an empty reply in the subject", func() {
 			component.Varz.Type = "TestType"
-			component.Logger = logger
+			component.Logger = logger.Logger
 
 			err := component.Start()
 			Expect(err).ToNot(HaveOccurred())

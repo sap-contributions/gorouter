@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"os"
 
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 )
 
 type ErrorWriter interface {
@@ -108,7 +108,7 @@ func (ew *htmlErrorWriter) WriteError(
 	var respBytes []byte
 	var rendered bytes.Buffer
 	if err := ew.tpl.Execute(&rendered, &tplContext); err != nil {
-		logger.Error("render-error-failed", goRouterLogger.ErrAttr(err))
+		logger.Error("render-error-failed", log.ErrAttr(err))
 		rw.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		rw.Header().Set("X-Content-Type-Options", "nosniff")
 		respBytes = []byte(body)

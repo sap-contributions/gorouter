@@ -7,7 +7,7 @@ import (
 	"github.com/openzipkin/zipkin-go/propagation/b3"
 	"github.com/urfave/negroni/v3"
 
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 )
 
 // Zipkin is a handler that sets Zipkin headers on requests
@@ -37,7 +37,7 @@ func (z *Zipkin) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.Ha
 
 	requestInfo, err := ContextRequestInfo(r)
 	if err != nil {
-		logger.Error("failed-to-get-request-info", goRouterLogger.ErrAttr(err))
+		logger.Error("failed-to-get-request-info", log.ErrAttr(err))
 		return
 	}
 
@@ -49,11 +49,11 @@ func (z *Zipkin) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.Ha
 
 		sc, err := b3.ParseSingleHeader(existingContext)
 		if err != nil {
-			logger.Error("failed-to-parse-single-header", goRouterLogger.ErrAttr(err))
+			logger.Error("failed-to-parse-single-header", log.ErrAttr(err))
 		} else {
 			err = requestInfo.SetTraceInfo(sc.TraceID.String(), sc.ID.String())
 			if err != nil {
-				logger.Error("failed-to-set-trace-info", goRouterLogger.ErrAttr(err))
+				logger.Error("failed-to-set-trace-info", log.ErrAttr(err))
 			} else {
 				return
 			}
@@ -71,7 +71,7 @@ func (z *Zipkin) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.Ha
 			r.Header.Get(b3.Flags),
 		)
 		if err != nil {
-			logger.Info("failed-to-parse-b3-trace-id", goRouterLogger.ErrAttr(err))
+			logger.Info("failed-to-parse-b3-trace-id", log.ErrAttr(err))
 			return
 		}
 		r.Header.Set(b3.Context, b3.BuildSingleHeader(*sc))
@@ -83,7 +83,7 @@ func (z *Zipkin) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.Ha
 
 		err = requestInfo.SetTraceInfo(sc.TraceID.String(), sc.ID.String())
 		if err != nil {
-			logger.Error("failed-to-set-trace-info", goRouterLogger.ErrAttr(err))
+			logger.Error("failed-to-set-trace-info", log.ErrAttr(err))
 		} else {
 			return
 		}
@@ -91,7 +91,7 @@ func (z *Zipkin) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.Ha
 
 	traceInfo, err := requestInfo.ProvideTraceInfo()
 	if err != nil {
-		logger.Error("failed-to-get-trace-info", goRouterLogger.ErrAttr(err))
+		logger.Error("failed-to-get-trace-info", log.ErrAttr(err))
 		return
 	}
 

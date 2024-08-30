@@ -16,10 +16,9 @@ import (
 	"time"
 
 	router_http "code.cloudfoundry.org/gorouter/common/http"
-
 	"code.cloudfoundry.org/gorouter/config"
 	"code.cloudfoundry.org/gorouter/handlers"
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/metrics"
 	"code.cloudfoundry.org/gorouter/proxy/fails"
 	"code.cloudfoundry.org/gorouter/proxy/utils"
@@ -180,7 +179,7 @@ func (rt *roundTripper) RoundTrip(originalRequest *http.Request) (*http.Response
 			// which expects a 0-indexed value
 			endpoint, selectEndpointErr = rt.selectEndpoint(iter, request, attempt-1)
 			if selectEndpointErr != nil {
-				logger.Error("select-endpoint-failed", slog.String("host", reqInfo.RoutePool.Host()), goRouterLogger.ErrAttr(selectEndpointErr))
+				logger.Error("select-endpoint-failed", slog.String("host", reqInfo.RoutePool.Host()), log.ErrAttr(selectEndpointErr))
 				break
 			}
 			logger = logger.With(slog.Any("route-endpoint", endpoint.ToLogData()))
@@ -200,7 +199,7 @@ func (rt *roundTripper) RoundTrip(originalRequest *http.Request) (*http.Response
 				retriable, err := rt.isRetriable(request, err, trace)
 
 				logger.Error("backend-endpoint-failed",
-					goRouterLogger.ErrAttr(err),
+					log.ErrAttr(err),
 					slog.Int("attempt", attempt),
 					slog.String("vcap_request_id", request.Header.Get(handlers.VcapRequestIdHeader)),
 					slog.Bool("retriable", retriable),
@@ -251,7 +250,7 @@ func (rt *roundTripper) RoundTrip(originalRequest *http.Request) (*http.Response
 				logger.Error(
 					"route-service-connection-failed",
 					slog.String("route-service-endpoint", request.URL.String()),
-					goRouterLogger.ErrAttr(err),
+					log.ErrAttr(err),
 					slog.Int("attempt", attempt),
 					slog.String("vcap_request_id", request.Header.Get(handlers.VcapRequestIdHeader)),
 					slog.Bool("retriable", retriable),
@@ -283,7 +282,7 @@ func (rt *roundTripper) RoundTrip(originalRequest *http.Request) (*http.Response
 
 	// if the client disconnects before response is sent then return context.Canceled (499) instead of the gateway error
 	if err != nil && errors.Is(originalRequest.Context().Err(), context.Canceled) && !errors.Is(err, context.Canceled) {
-		rt.logger.Error("gateway-error-and-original-request-context-cancelled", goRouterLogger.ErrAttr(err))
+		rt.logger.Error("gateway-error-and-original-request-context-cancelled", log.ErrAttr(err))
 		err = originalRequest.Context().Err()
 		if originalRequest.Body != nil {
 			_ = originalRequest.Body.Close()
@@ -384,7 +383,7 @@ func (rt *roundTripper) timedRoundTrip(tr http.RoundTripper, request *http.Reque
 	go func() {
 		<-reqCtx.Done()
 		if errors.Is(reqCtx.Err(), context.DeadlineExceeded) {
-			logger.Error("backend-request-timeout", goRouterLogger.ErrAttr(reqCtx.Err()), slog.String("vcap_request_id", vrid))
+			logger.Error("backend-request-timeout", log.ErrAttr(reqCtx.Err()), slog.String("vcap_request_id", vrid))
 		}
 		cancel()
 	}()

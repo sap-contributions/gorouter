@@ -12,7 +12,7 @@ import (
 
 	"code.cloudfoundry.org/gorouter/config"
 	"code.cloudfoundry.org/gorouter/errorwriter"
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/routeservice"
 )
 
@@ -61,7 +61,7 @@ func (c *clientCert) ServeHTTP(rw http.ResponseWriter, r *http.Request, next htt
 
 	delete, err := c.forceDeleteHeader(r)
 	if err != nil {
-		c.logger.Error("signature-validation-failed", goRouterLogger.ErrAttr(err))
+		c.logger.Error("signature-validation-failed", log.ErrAttr(err))
 		if errors.Is(err, routeservice.ErrExpired) {
 			c.errorWriter.WriteError(
 				rw,

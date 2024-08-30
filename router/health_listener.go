@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 )
 
 type HealthListener struct {
@@ -55,7 +55,7 @@ func (hl *HealthListener) ListenAndServe() error {
 	go func() {
 		err := s.Serve(healthListener)
 		if !hl.Router.IsStopping() {
-			hl.Logger.Error("health-listener-failed", goRouterLogger.ErrAttr(err))
+			hl.Logger.Error("health-listener-failed", log.ErrAttr(err))
 		}
 	}()
 	return nil

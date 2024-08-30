@@ -6,7 +6,7 @@ import (
 
 	"github.com/urfave/negroni/v3"
 
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 )
 
 const (
@@ -29,7 +29,7 @@ func (s *setVcapRequestIdHeader) ServeHTTP(rw http.ResponseWriter, r *http.Reque
 
 	requestInfo, err := ContextRequestInfo(r)
 	if err != nil {
-		s.logger.Error("failed-to-get-request-info", goRouterLogger.ErrAttr(err))
+		s.logger.Error("failed-to-get-request-info", log.ErrAttr(err))
 		return
 	}
 
@@ -37,7 +37,7 @@ func (s *setVcapRequestIdHeader) ServeHTTP(rw http.ResponseWriter, r *http.Reque
 
 	traceInfo, err := requestInfo.ProvideTraceInfo()
 	if err != nil {
-		logger.Error("failed-to-get-trace-info", goRouterLogger.ErrAttr(err))
+		logger.Error("failed-to-get-trace-info", log.ErrAttr(err))
 		return
 	}
 

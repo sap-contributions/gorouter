@@ -10,7 +10,7 @@ import (
 	"code.cloudfoundry.org/gorouter/accesslog"
 	"code.cloudfoundry.org/gorouter/accesslog/schema"
 	router_http "code.cloudfoundry.org/gorouter/common/http"
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/proxy/utils"
 
 	"github.com/urfave/negroni/v3"
@@ -55,7 +55,7 @@ func (a *accessLog) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http
 
 	reqInfo, err := ContextRequestInfo(r)
 	if err != nil {
-		goRouterLogger.Panic(a.logger, "request-info-err", goRouterLogger.ErrAttr(err))
+		log.Panic(a.logger, "request-info-err", log.ErrAttr(err))
 		return
 	}
 

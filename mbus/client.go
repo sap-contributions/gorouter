@@ -12,7 +12,7 @@ import (
 	"code.cloudfoundry.org/tlsconfig"
 
 	"code.cloudfoundry.org/gorouter/config"
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 )
 
 type Signal struct{}
@@ -42,7 +42,7 @@ func Connect(c *config.Config, reconnected chan<- Signal, l *slog.Logger) *nats.
 	}
 
 	if err != nil {
-		l.Error("nats-connection-error", goRouterLogger.ErrAttr(err))
+		l.Error("nats-connection-error", log.ErrAttr(err))
 		os.Exit(1)
 	}
 
@@ -72,7 +72,7 @@ func natsOptions(l *slog.Logger, c *config.Config, natsHost *atomic.Value, natsA
 			tlsconfig.WithAuthority(c.Nats.CAPool),
 		)
 		if err != nil {
-			l.Error("nats-tls-config-invalid", goRouterLogger.ErrAttr(err))
+			l.Error("nats-tls-config-invalid", log.ErrAttr(err))
 			os.Exit(1)
 		}
 	}
@@ -114,7 +114,7 @@ func natsOptions(l *slog.Logger, c *config.Config, natsHost *atomic.Value, natsA
 		natsURL, err := url.Parse(conn.ConnectedUrl())
 		natsHostStr := ""
 		if err != nil {
-			l.Error("nats-url-parse-error", goRouterLogger.ErrAttr(err))
+			l.Error("nats-url-parse-error", log.ErrAttr(err))
 		} else {
 			natsHostStr = natsURL.Host
 		}

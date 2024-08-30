@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"io"
 	"log/slog"
 	"os"
 	"time"
@@ -10,11 +11,40 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var DynamicLoggingConfig dynamicTimeEncoder
+var (
+	dynamicLoggingConfig dynamicTimeEncoder
+	baseLogger           *slog.Logger
+	writeSyncer          = &dynamicWriter{w: zapcore.Lock(os.Stdout)}
+)
 
 type dynamicTimeEncoder struct {
 	encoding string
 	level    zap.AtomicLevel
+}
+
+type dynamicWriter struct {
+	w WriteSyncer
+}
+
+func SetDynamicWriteSyncer(syncer WriteSyncer) {
+	writeSyncer.w = syncer
+}
+
+func (d *dynamicWriter) Write(b []byte) (n int, err error) {
+	return d.w.Write(b)
+}
+
+func (d *dynamicWriter) Sync() error {
+	return d.w.Sync()
+}
+
+type WriteSyncer interface {
+	io.Writer
+	Sync() error
+}
+
+func init() {
+	baseLogger = initializeLogger()
 }
 
 /*
@@ -22,8 +52,8 @@ SetTimeEncoder dynamically sets the time encoder at runtime:
 'rfc3339': The encoder is set to a custom RFC3339 encoder
 All other values: The encoder is set to an Epoch encoder
 */
-func (e *dynamicTimeEncoder) SetTimeEncoder(enc string) {
-	e.encoding = enc
+func SetTimeEncoder(enc string) {
+	dynamicLoggingConfig.encoding = enc
 }
 
 func (e *dynamicTimeEncoder) encodeTime(t time.Time, pae zapcore.PrimitiveArrayEncoder) {
@@ -39,32 +69,32 @@ func (e *dynamicTimeEncoder) encodeTime(t time.Time, pae zapcore.PrimitiveArrayE
 SetLoggingLevel dynamically sets the logging level at runtime. See https://github.com/uber-go/zap/blob/5786471c1d41c255c1d8b63ad30a82b68eda2c21/zapcore/level.go#L180
 for possible logging levels.
 */
-func (e *dynamicTimeEncoder) SetLoggingLevel(level string) {
+func SetLoggingLevel(level string) {
 	zapLevel, err := zapcore.ParseLevel(level)
 	if err != nil {
 		panic(err)
 	}
-	e.level.SetLevel(zapLevel)
+	dynamicLoggingConfig.level.SetLevel(zapLevel)
+}
+
+type Logger interface {
 }
 
 /*
-CreateNewLogger is used to create a pre-configured slog.Logger with a zapslog handler and provided logging level,
+InitializeLogger is used to create a pre-configured slog.Logger with a zapslog handler and provided logging level,
 timestamp format and writeSyncer.
 */
-func CreateNewLogger(level string, timestampFormat string, writeSyncer zapcore.WriteSyncer) *slog.Logger {
-	zapLevel, err := zapcore.ParseLevel(level)
-	if err != nil {
-		panic(err)
-	}
+func initializeLogger() *slog.Logger {
+	zapLevel := zap.InfoLevel
 
-	DynamicLoggingConfig = dynamicTimeEncoder{encoding: timestampFormat, level: zap.NewAtomicLevelAt(zapLevel)}
+	dynamicLoggingConfig = dynamicTimeEncoder{encoding: "epoch", level: zap.NewAtomicLevelAt(zapLevel)}
 
 	zapConfig := zapcore.EncoderConfig{
 		MessageKey:    "message",
 		LevelKey:      "log_level",
 		EncodeLevel:   numberLevelFormatter,
 		TimeKey:       "timestamp",
-		EncodeTime:    DynamicLoggingConfig.encodeTime,
+		EncodeTime:    dynamicLoggingConfig.encodeTime,
 		EncodeCaller:  zapcore.ShortCallerEncoder,
 		StacktraceKey: "stack_trace",
 	}
@@ -72,13 +102,12 @@ func CreateNewLogger(level string, timestampFormat string, writeSyncer zapcore.W
 	zapCore := zapcore.NewCore(
 		zapcore.NewJSONEncoder(zapConfig),
 		writeSyncer,
-		DynamicLoggingConfig.level,
+		dynamicLoggingConfig.level,
 	)
 
 	zapHandler := zapslog.NewHandler(zapCore, &zapslog.HandlerOptions{AddSource: true})
 	slogFrontend := slog.New(zapHandler)
 	return slogFrontend
-
 }
 
 /*
@@ -99,11 +128,31 @@ func levelNumber(level zapcore.Level) int {
 }
 
 /*
-AppendSource returns a copy of the provided logger, which comes with the 'source' attribute set to the provided
-prefix and component.
+CreateLoggerWithSource returns a copy of the provided logger, which comes with the 'source' attribute set to the provided
+prefix and component. All subsequent log statements will be nested in the 'data' field.
 */
-func AppendSource(logger *slog.Logger, prefix string, component string) *slog.Logger {
-	return logger.With(slog.String("source", prefix+"."+component))
+func CreateLoggerWithSource(prefix string, component string) *slog.Logger {
+	if baseLogger == nil {
+		panic("logger is not initialized")
+	}
+	var appendix string
+
+	if len(component) == 0 {
+		appendix = prefix
+	} else {
+		appendix = prefix + "." + component
+	}
+	return baseLogger.With(slog.String("source", appendix)).WithGroup("data")
+}
+
+/*
+CreateLoggerWithSource returns a copy of the provided logger. All subsequent log statements will be nested in the 'data' field.
+*/
+func CreateLogger() *slog.Logger {
+	if baseLogger == nil {
+		panic("logger is not initialized")
+	}
+	return baseLogger.WithGroup("data")
 }
 
 /*

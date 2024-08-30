@@ -7,7 +7,7 @@ import (
 
 	router_http "code.cloudfoundry.org/gorouter/common/http"
 	"code.cloudfoundry.org/gorouter/config"
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 )
 
 type MaxRequestSize struct {
@@ -51,11 +51,11 @@ func (m *MaxRequestSize) ServeHTTP(rw http.ResponseWriter, r *http.Request, next
 	if reqSize >= m.MaxSize {
 		reqInfo, err := ContextRequestInfo(r)
 		if err != nil {
-			logger.Error("request-info-err", goRouterLogger.ErrAttr(err))
+			logger.Error("request-info-err", log.ErrAttr(err))
 		} else {
 			endpointIterator, err := EndpointIteratorForRequest(logger, r, m.cfg.StickySessionCookieNames, m.cfg.StickySessionsForAuthNegotiate, m.cfg.LoadBalanceAZPreference, m.cfg.Zone)
 			if err != nil {
-				logger.Error("failed-to-find-endpoint-for-req-during-431-short-circuit", goRouterLogger.ErrAttr(err))
+				logger.Error("failed-to-find-endpoint-for-req-during-431-short-circuit", log.ErrAttr(err))
 			} else {
 				reqInfo.RouteEndpoint = endpointIterator.Next(0)
 			}

@@ -13,7 +13,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"code.cloudfoundry.org/gorouter/config"
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/registry"
 	"code.cloudfoundry.org/gorouter/route"
 	routing_api "code.cloudfoundry.org/routing-api"
@@ -79,7 +79,7 @@ func (r *RouteFetcher) Run(signals <-chan os.Signal, ready chan<- struct{}) erro
 		case <-ticker.C():
 			err := r.FetchRoutes()
 			if err != nil {
-				r.logger.Error("failed-to-fetch-routes", goRouterLogger.ErrAttr(err))
+				r.logger.Error("failed-to-fetch-routes", log.ErrAttr(err))
 			}
 		case e := <-r.eventChannel:
 			r.HandleEvent(e)
@@ -90,7 +90,7 @@ func (r *RouteFetcher) Run(signals <-chan os.Signal, ready chan<- struct{}) erro
 			if es := r.eventSource.Load(); es != nil {
 				err := es.(routing_api.EventSource).Close()
 				if err != nil {
-					r.logger.Error("failed-closing-routing-api-event-source", goRouterLogger.ErrAttr(err))
+					r.logger.Error("failed-closing-routing-api-event-source", log.ErrAttr(err))
 				}
 			}
 			ticker.Stop()
@@ -107,7 +107,7 @@ func (r *RouteFetcher) startEventCycle() {
 			token, err := r.UaaTokenFetcher.FetchToken(context.Background(), forceUpdate)
 			if err != nil {
 				metrics.IncrementCounter(TokenFetchErrors)
-				r.logger.Error("failed-to-fetch-token", goRouterLogger.ErrAttr(err))
+				r.logger.Error("failed-to-fetch-token", log.ErrAttr(err))
 			} else {
 				r.logger.Debug("token-fetched-successfully")
 				if atomic.LoadInt32(&r.stopEventSource) == 1 {
@@ -135,14 +135,14 @@ func (r *RouteFetcher) subscribeToEvents(token *oauth2.Token) error {
 	source, err := r.client.SubscribeToEventsWithMaxRetries(maxRetries)
 	if err != nil {
 		metrics.IncrementCounter(SubscribeEventsErrors)
-		r.logger.Error("failed-subscribing-to-routing-api-event-stream", goRouterLogger.ErrAttr(err))
+		r.logger.Error("failed-subscribing-to-routing-api-event-stream", log.ErrAttr(err))
 		return err
 	}
 	r.logger.Info("Successfully-subscribed-to-routing-api-event-stream")
 
 	err = r.FetchRoutes()
 	if err != nil {
-		r.logger.Error("failed-to-refresh-routes", goRouterLogger.ErrAttr(err))
+		r.logger.Error("failed-to-refresh-routes", log.ErrAttr(err))
 	}
 
 	r.eventSource.Store(source)
@@ -152,11 +152,11 @@ func (r *RouteFetcher) subscribeToEvents(token *oauth2.Token) error {
 		event, err = source.Next()
 		if err != nil {
 			metrics.IncrementCounter(SubscribeEventsErrors)
-			r.logger.Error("failed-getting-next-event: ", goRouterLogger.ErrAttr(err))
+			r.logger.Error("failed-getting-next-event: ", log.ErrAttr(err))
 
 			closeErr := source.Close()
 			if closeErr != nil {
-				r.logger.Error("failed-closing-event-source", goRouterLogger.ErrAttr(closeErr))
+				r.logger.Error("failed-closing-event-source", log.ErrAttr(closeErr))
 			}
 			break
 		}

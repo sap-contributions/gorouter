@@ -11,7 +11,7 @@ import (
 
 	"github.com/cloudfoundry/dropsonde/metrics"
 
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 )
 
 type FileDescriptor struct {
@@ -39,7 +39,7 @@ func (f *FileDescriptor) Run(signals <-chan os.Signal, ready chan<- struct{}) er
 			if runtime.GOOS == "linux" {
 				dirEntries, err := os.ReadDir(f.path)
 				if err != nil {
-					f.logger.Error("error-reading-filedescriptor-path", goRouterLogger.ErrAttr(err))
+					f.logger.Error("error-reading-filedescriptor-path", log.ErrAttr(err))
 					break
 				}
 				numFds = symlinks(dirEntries)
@@ -49,7 +49,7 @@ func (f *FileDescriptor) Run(signals <-chan os.Signal, ready chan<- struct{}) er
 					// no /proc on MacOS, falling back to lsof
 					out, err := exec.Command("/bin/sh", "-c", fmt.Sprintf("lsof -p %v", os.Getpid())).Output()
 					if err != nil {
-						f.logger.Error("error-running-lsof", goRouterLogger.ErrAttr(err))
+						f.logger.Error("error-running-lsof", log.ErrAttr(err))
 						break
 					}
 					lines := strings.Split(string(out), "\n")
@@ -59,7 +59,7 @@ func (f *FileDescriptor) Run(signals <-chan os.Signal, ready chan<- struct{}) er
 				}
 			}
 			if err := f.sender.SendValue("file_descriptors", float64(numFds), "file"); err != nil {
-				f.logger.Error("error-sending-file-descriptor-metric", goRouterLogger.ErrAttr(err))
+				f.logger.Error("error-sending-file-descriptor-metric", log.ErrAttr(err))
 			}
 
 		case <-signals:

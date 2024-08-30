@@ -2,21 +2,27 @@ package handlers_test
 
 import (
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 
+	"github.com/onsi/gomega/gbytes"
+	"go.uber.org/zap/zapcore"
+
 	"code.cloudfoundry.org/gorouter/common/health"
 
-	"code.cloudfoundry.org/gorouter/handlers"
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
-	"code.cloudfoundry.org/gorouter/test_util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"code.cloudfoundry.org/gorouter/handlers"
+	log "code.cloudfoundry.org/gorouter/logger"
+	"code.cloudfoundry.org/gorouter/test_util"
 )
 
 var _ = Describe("Healthcheck", func() {
 	var (
 		handler      http.Handler
+		testSink     *test_util.TestSink
 		logger       *slog.Logger
 		resp         *httptest.ResponseRecorder
 		req          *http.Request
@@ -24,7 +30,10 @@ var _ = Describe("Healthcheck", func() {
 	)
 
 	BeforeEach(func() {
-		logger = test_util.NewTestZapLogger("healthcheck")
+		logger = log.CreateLogger()
+		testSink = &test_util.TestSink{Buffer: gbytes.NewBuffer()}
+		log.SetDynamicWriteSyncer(zapcore.NewMultiWriteSyncer(testSink, zapcore.AddSync(GinkgoWriter)))
+		log.SetLoggingLevel("Debug")
 		req = test_util.NewRequest("GET", "example.com", "/", nil)
 		resp = httptest.NewRecorder()
 		healthStatus = &health.Health{}

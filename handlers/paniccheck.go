@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"runtime"
 
 	"github.com/urfave/negroni/v3"
 
@@ -11,7 +12,7 @@ import (
 
 	"code.cloudfoundry.org/gorouter/common/health"
 
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 )
 
 type panicCheck struct {
@@ -42,7 +43,7 @@ func (p *panicCheck) ServeHTTP(rw http.ResponseWriter, r *http.Request, next htt
 					err = fmt.Errorf("%v", rec)
 				}
 				logger := LoggerWithTraceInfo(p.logger, r)
-				logger.Error("panic-check", slog.String("host", r.Host), slog.Any("error", goRouterLogger.ErrAttr(err)))
+				logger.Error("panic-check", slog.String("host", r.Host), log.ErrAttr(err), slog.Any("stacktrace", runtime.StartTrace()))
 
 				rw.Header().Set(router_http.CfRouterError, "unknown_failure")
 				rw.WriteHeader(http.StatusBadGateway)

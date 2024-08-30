@@ -9,7 +9,7 @@ import (
 
 	"code.cloudfoundry.org/gorouter/accesslog/schema"
 	"code.cloudfoundry.org/gorouter/config"
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 )
 
 //go:generate counterfeiter -o fakes/accesslogger.go . AccessLogger
@@ -62,7 +62,7 @@ func CreateRunningAccessLogger(logger *slog.Logger, logsender schema.LogSender, 
 	if config.AccessLog.File != "" {
 		file, err := os.OpenFile(config.AccessLog.File, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
 		if err != nil {
-			logger.Error("error-creating-accesslog-file", slog.String("filename", config.AccessLog.File), goRouterLogger.ErrAttr(err))
+			logger.Error("error-creating-accesslog-file", slog.String("filename", config.AccessLog.File), log.ErrAttr(err))
 			return nil, err
 		}
 
@@ -72,7 +72,7 @@ func CreateRunningAccessLogger(logger *slog.Logger, logsender schema.LogSender, 
 	if config.AccessLog.EnableStreaming {
 		syslogWriter, err := syslog.Dial(config.Logging.SyslogNetwork, config.Logging.SyslogAddr, syslog.LOG_INFO, config.Logging.Syslog)
 		if err != nil {
-			logger.Error("error-creating-syslog-writer", goRouterLogger.ErrAttr(err))
+			logger.Error("error-creating-syslog-writer", log.ErrAttr(err))
 			return nil, err
 		}
 
@@ -90,7 +90,7 @@ func (x *FileAndLoggregatorAccessLogger) Run() {
 			for _, w := range x.writers {
 				_, err := record.WriteTo(w.Writer)
 				if err != nil {
-					x.logger.Error(fmt.Sprintf("error-emitting-access-log-to-writer-%s", w.Name), goRouterLogger.ErrAttr(err))
+					x.logger.Error(fmt.Sprintf("error-emitting-access-log-to-writer-%s", w.Name), log.ErrAttr(err))
 				}
 			}
 			record.SendLog(x.logsender)

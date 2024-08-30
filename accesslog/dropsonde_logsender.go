@@ -13,7 +13,7 @@ import (
 
 	"code.cloudfoundry.org/gorouter/accesslog/schema"
 	"code.cloudfoundry.org/gorouter/config"
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 )
 
 type DropsondeLogSender struct {
@@ -25,7 +25,7 @@ type DropsondeLogSender struct {
 func (l *DropsondeLogSender) SendAppLog(appID, message string, tags map[string]string) {
 	if l.sourceInstance == "" || appID == "" {
 		l.logger.Debug("dropping-loggregator-access-log",
-			goRouterLogger.ErrAttr(fmt.Errorf("either no appId or source instance present")),
+			log.ErrAttr(fmt.Errorf("either no appId or source instance present")),
 			slog.String("appID", appID),
 			slog.String("sourceInstance", l.sourceInstance),
 		)
@@ -46,14 +46,14 @@ func (l *DropsondeLogSender) SendAppLog(appID, message string, tags map[string]s
 
 	envelope, err := emitter.Wrap(logMessage, l.eventEmitter.Origin())
 	if err != nil {
-		l.logger.Error("error-wrapping-access-log-for-emitting", goRouterLogger.ErrAttr(err))
+		l.logger.Error("error-wrapping-access-log-for-emitting", log.ErrAttr(err))
 		return
 	}
 
 	envelope.Tags = tags
 
 	if err = l.eventEmitter.EmitEnvelope(envelope); err != nil {
-		l.logger.Error("error-emitting-access-log-to-writers", goRouterLogger.ErrAttr(err))
+		l.logger.Error("error-emitting-access-log-to-writers", log.ErrAttr(err))
 	}
 }
 

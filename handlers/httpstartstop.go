@@ -14,7 +14,7 @@ import (
 	"github.com/urfave/negroni/v3"
 	"google.golang.org/protobuf/proto"
 
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/proxy/utils"
 )
 
@@ -38,12 +38,12 @@ func (hh *httpStartStopHandler) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 
 	requestID, err := uuid.ParseHex(r.Header.Get(VcapRequestIdHeader))
 	if err != nil {
-		goRouterLogger.Panic(logger, "start-stop-handler-err", slog.String("error", "X-Vcap-Request-Id not found"))
+		log.Panic(logger, "start-stop-handler-err", slog.String("error", "X-Vcap-Request-Id not found"))
 		return
 	}
 	prw, ok := rw.(utils.ProxyResponseWriter)
 	if !ok {
-		goRouterLogger.Panic(logger, "request-info-err", slog.String("error", "ProxyResponseWriter not found"))
+		log.Panic(logger, "request-info-err", slog.String("error", "ProxyResponseWriter not found"))
 		return
 	}
 
@@ -62,20 +62,20 @@ func (hh *httpStartStopHandler) ServeHTTP(rw http.ResponseWriter, r *http.Reques
 
 	envelope, err := emitter.Wrap(startStopEvent, hh.emitter.Origin())
 	if err != nil {
-		logger.Info("failed-to-create-startstop-envelope", goRouterLogger.ErrAttr(err))
+		logger.Info("failed-to-create-startstop-envelope", log.ErrAttr(err))
 		return
 	}
 
 	info, err := ContextRequestInfo(r)
 	if err != nil {
-		logger.Error("request-info-err", goRouterLogger.ErrAttr(err))
+		logger.Error("request-info-err", log.ErrAttr(err))
 	} else {
 		envelope.Tags = hh.envelopeTags(info)
 	}
 
 	err = hh.emitter.EmitEnvelope(envelope)
 	if err != nil {
-		logger.Info("failed-to-emit-startstop-event", goRouterLogger.ErrAttr(err))
+		logger.Info("failed-to-emit-startstop-event", log.ErrAttr(err))
 	}
 }
 

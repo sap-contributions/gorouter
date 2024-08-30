@@ -11,7 +11,7 @@ import (
 
 	router_http "code.cloudfoundry.org/gorouter/common/http"
 	"code.cloudfoundry.org/gorouter/errorwriter"
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/metrics"
 	"code.cloudfoundry.org/gorouter/registry"
 	"code.cloudfoundry.org/gorouter/route"
@@ -102,7 +102,7 @@ func (l *lookupHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request, next 
 
 	requestInfo, err := ContextRequestInfo(r)
 	if err != nil {
-		goRouterLogger.Panic(logger, "request-info-err", goRouterLogger.ErrAttr(err))
+		log.Panic(logger, "request-info-err", log.ErrAttr(err))
 		return
 	}
 	requestInfo.RoutePool = pool
@@ -195,7 +195,7 @@ func (l *lookupHandler) lookup(r *http.Request, logger *slog.Logger) (*route.End
 	if appInstanceHeader != "" {
 		err := validateInstanceHeader(appInstanceHeader)
 		if err != nil {
-			logger.Error("invalid-app-instance-header", goRouterLogger.ErrAttr(err))
+			logger.Error("invalid-app-instance-header", log.ErrAttr(err))
 			return nil, InvalidInstanceHeaderError{headerValue: appInstanceHeader}
 		}
 

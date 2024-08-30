@@ -96,11 +96,11 @@ func (r *RouteRegistry) Register(uri route.Uri, endpoint *route.Endpoint) {
 
 	switch endpointAdded {
 	case route.ADDED:
-		r.logger.Info("endpoint-registered", slog.Any(uri.String(), endpoint))
+		r.logger.Info("endpoint-registered", buildSlogAttrs(uri, endpoint)...)
 	case route.UPDATED:
-		r.logger.Debug("endpoint-registered", slog.Any(uri.String(), endpoint))
+		r.logger.Debug("endpoint-registered", buildSlogAttrs(uri, endpoint)...)
 	default:
-		r.logger.Debug("endpoint-not-registered", slog.Any(uri.String(), endpoint))
+		r.logger.Debug("endpoint-not-registered", buildSlogAttrs(uri, endpoint)...)
 	}
 }
 

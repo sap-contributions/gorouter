@@ -22,7 +22,7 @@ import (
 	"code.cloudfoundry.org/gorouter/config"
 	"code.cloudfoundry.org/gorouter/errorwriter"
 	"code.cloudfoundry.org/gorouter/handlers"
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/metrics"
 	"code.cloudfoundry.org/gorouter/proxy/fails"
 	"code.cloudfoundry.org/gorouter/proxy/round_tripper"
@@ -236,17 +236,17 @@ func (p *proxy) ServeHTTP(responseWriter http.ResponseWriter, request *http.Requ
 
 		err := rc.EnableFullDuplex()
 		if err != nil {
-			logger.Error("enable-full-duplex-err", goRouterLogger.ErrAttr(err))
+			logger.Error("enable-full-duplex-err", log.ErrAttr(err))
 		}
 	}
 
 	reqInfo, err := handlers.ContextRequestInfo(request)
 	if err != nil {
-		logger.Error("request-info-err", goRouterLogger.ErrAttr(err))
+		logger.Error("request-info-err", log.ErrAttr(err))
 	}
 
 	if reqInfo.RoutePool == nil {
-		logger.Error("request-info-err", goRouterLogger.ErrAttr(errors.New("failed-to-access-RoutePool")))
+		logger.Error("request-info-err", log.ErrAttr(errors.New("failed-to-access-RoutePool")))
 	}
 
 	reqInfo.AppRequestStartedAt = time.Now()
@@ -257,7 +257,7 @@ func (p *proxy) ServeHTTP(responseWriter http.ResponseWriter, request *http.Requ
 func (p *proxy) setupProxyRequest(target *http.Request) {
 	reqInfo, err := handlers.ContextRequestInfo(target)
 	if err != nil {
-		p.logger.Error("request-info-err", goRouterLogger.ErrAttr(err))
+		p.logger.Error("request-info-err", log.ErrAttr(err))
 		return
 	}
 	reqInfo.BackendReqHeaders = target.Header
@@ -284,7 +284,7 @@ func (p *proxy) setupProxyRequest(target *http.Request) {
 func (p *proxy) setupProxyRequestClose100Continue(target *httputil.ProxyRequest) {
 	reqInfo, err := handlers.ContextRequestInfo(target.In)
 	if err != nil {
-		p.logger.Error("request-info-err", goRouterLogger.ErrAttr(err))
+		p.logger.Error("request-info-err", log.ErrAttr(err))
 		return
 	}
 	reqInfo.BackendReqHeaders = target.Out.Header

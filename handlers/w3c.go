@@ -7,7 +7,7 @@ import (
 
 	"github.com/urfave/negroni/v3"
 
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 )
 
 const (
@@ -44,7 +44,7 @@ func (m *W3C) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.Handl
 
 	requestInfo, err := ContextRequestInfo(r)
 	if err != nil {
-		m.logger.Error("failed-to-get-request-info", goRouterLogger.ErrAttr(err))
+		m.logger.Error("failed-to-get-request-info", log.ErrAttr(err))
 		return
 	}
 
@@ -65,7 +65,7 @@ func (m *W3C) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.Handl
 func (m *W3C) ServeNewTraceparent(rw http.ResponseWriter, r *http.Request, requestInfo *RequestInfo, logger *slog.Logger) {
 	traceparent, err := NewW3CTraceparent(requestInfo)
 	if err != nil {
-		logger.Error("failed-to-create-w3c-traceparent", goRouterLogger.ErrAttr(err))
+		logger.Error("failed-to-create-w3c-traceparent", log.ErrAttr(err))
 		return
 	}
 
@@ -84,7 +84,7 @@ func (m *W3C) ServeUpdatedTraceparent(
 ) {
 	traceparent, err := prevTraceparent.Next()
 	if err != nil {
-		logger.Info("failed-to-generate-next-w3c-traceparent", goRouterLogger.ErrAttr(err))
+		logger.Info("failed-to-generate-next-w3c-traceparent", log.ErrAttr(err))
 		return
 	}
 

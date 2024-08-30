@@ -6,7 +6,7 @@ import (
 
 	"github.com/urfave/negroni/v3"
 
-	goRouterLogger "code.cloudfoundry.org/gorouter/logger"
+	log "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/proxy/utils"
 )
 
@@ -26,7 +26,7 @@ func NewProxyWriter(logger *slog.Logger) negroni.Handler {
 func (p *proxyWriterHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	reqInfo, err := ContextRequestInfo(r)
 	if err != nil {
-		p.logger.Error("request-info-err", goRouterLogger.ErrAttr(err))
+		log.Panic(p.logger, "request-info-err", log.ErrAttr(err))
 		return
 	}
 	proxyWriter := utils.NewProxyResponseWriter(rw)
