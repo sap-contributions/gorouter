@@ -5,21 +5,18 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"io"
-	"log/slog"
 	"net"
 	"net/http"
 	"sync"
 	"time"
 
-	"code.cloudfoundry.org/gorouter/common/secure"
-	log "code.cloudfoundry.org/gorouter/logger"
-	"code.cloudfoundry.org/gorouter/routeservice"
-	"code.cloudfoundry.org/gorouter/test_util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/types"
-	"go.uber.org/zap/zapcore"
+
+	"code.cloudfoundry.org/gorouter/common/secure"
+	"code.cloudfoundry.org/gorouter/routeservice"
+	"code.cloudfoundry.org/gorouter/test_util"
 )
 
 func HaveErrored() types.GomegaMatcher {
@@ -37,14 +34,11 @@ var _ = Describe("Route Services", func() {
 		forwardedUrl         string
 		rsCertChain          test_util.CertChain
 		routeServiceServer   sync.WaitGroup
-		testSink             *test_util.TestSink
-		logger               *slog.Logger
+		logger               *test_util.TestLogger
 	)
 
 	JustBeforeEach(func() {
-		logger = log.CreateLogger()
-		testSink = &test_util.TestSink{Buffer: gbytes.NewBuffer()}
-		log.SetDynamicWriteSyncer(zapcore.NewMultiWriteSyncer(testSink, zapcore.AddSync(GinkgoWriter)))
+		logger = test_util.NewTestLogger("test")
 		server := &http.Server{Handler: http.HandlerFunc(routeServiceHandler)}
 		routeServiceServer.Add(1)
 		go func() {
@@ -81,7 +75,7 @@ var _ = Describe("Route Services", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		config := routeservice.NewRouteServiceConfig(
-			logger,
+			logger.Logger,
 			conf.RouteServiceEnabled,
 			conf.RouteServicesHairpinning,
 			conf.RouteServicesHairpinningAllowlist,

@@ -235,17 +235,17 @@ func (p *proxy) ServeHTTP(responseWriter http.ResponseWriter, request *http.Requ
 
 		err := rc.EnableFullDuplex()
 		if err != nil {
-			log.Panic(p.logger, "enable-full-duplex-err", log.ErrAttr(err))
+			log.Panic(logger, "enable-full-duplex-err", log.ErrAttr(err))
 		}
 	}
 
 	reqInfo, err := handlers.ContextRequestInfo(request)
 	if err != nil {
-		log.Panic(p.logger, "request-info-err", log.ErrAttr(err))
+		log.Panic(logger, "request-info-err", log.ErrAttr(err))
 	}
 
 	if reqInfo.RoutePool == nil {
-		log.Panic(p.logger, "request-info-err", log.ErrAttr(errors.New("failed-to-access-RoutePool")))
+		log.Panic(logger, "request-info-err", log.ErrAttr(errors.New("failed-to-access-RoutePool")))
 	}
 
 	reqInfo.AppRequestStartedAt = time.Now()

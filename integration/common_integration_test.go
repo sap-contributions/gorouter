@@ -15,16 +15,17 @@ import (
 	"strings"
 	"time"
 
-	"code.cloudfoundry.org/gorouter/config"
-	"code.cloudfoundry.org/gorouter/mbus"
-	"code.cloudfoundry.org/gorouter/route"
-	"code.cloudfoundry.org/gorouter/test_util"
 	nats "github.com/nats-io/nats.go"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	. "github.com/onsi/gomega/gexec"
 	yaml "gopkg.in/yaml.v2"
+
+	"code.cloudfoundry.org/gorouter/config"
+	"code.cloudfoundry.org/gorouter/mbus"
+	"code.cloudfoundry.org/gorouter/route"
+	"code.cloudfoundry.org/gorouter/test_util"
 )
 
 type testState struct {

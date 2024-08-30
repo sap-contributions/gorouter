@@ -6,12 +6,13 @@ import (
 	"io"
 	"net/http"
 
-	"code.cloudfoundry.org/gorouter/common/health"
-	"code.cloudfoundry.org/gorouter/handlers"
-	"code.cloudfoundry.org/gorouter/test_util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+
+	"code.cloudfoundry.org/gorouter/common/health"
+	"code.cloudfoundry.org/gorouter/handlers"
+	"code.cloudfoundry.org/gorouter/test_util"
 )
 
 var _ = Describe("HealthListener", func() {
