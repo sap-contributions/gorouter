@@ -13,9 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"go.step.sm/crypto/pemutil"
-
 	"code.cloudfoundry.org/localip"
+	"go.step.sm/crypto/pemutil"
 	"gopkg.in/yaml.v2"
 )
 
