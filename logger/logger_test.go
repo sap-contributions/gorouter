@@ -190,6 +190,7 @@ var _ = Describe("Logger", func() {
 				testSink = &test_util.TestSink{Buffer: gbytes.NewBuffer()}
 				logger = log.CreateLogger()
 				log.SetDynamicWriteSyncer(zapcore.NewMultiWriteSyncer(testSink, zapcore.AddSync(GinkgoWriter)))
+				log.SetTimeEncoder("epoch")
 			})
 			It("outputs log messages with 'error' attribute", func() {
 				err := errors.New("this-is-an-error")
