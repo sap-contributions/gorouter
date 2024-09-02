@@ -27,6 +27,7 @@ var _ = Describe("LagerAdapter", func() {
 		testSink = &test_util.TestSink{Buffer: gbytes.NewBuffer()}
 		log.SetLoggingLevel("DEBUG")
 		log.SetDynamicWriteSyncer(zapcore.NewMultiWriteSyncer(testSink, zapcore.AddSync(GinkgoWriter)))
+		log.SetTimeEncoder("epoch")
 		lagerLogger = log.NewLagerAdapter(prefix)
 
 	})
