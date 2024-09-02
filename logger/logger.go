@@ -4,6 +4,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -15,6 +16,7 @@ var (
 	dynamicLoggingConfig dynamicTimeEncoder
 	baseLogger           *slog.Logger
 	writeSyncer          = &dynamicWriter{w: zapcore.Lock(os.Stdout)}
+	mutex                sync.Mutex
 )
 
 type dynamicTimeEncoder struct {
@@ -27,14 +29,20 @@ type dynamicWriter struct {
 }
 
 func SetDynamicWriteSyncer(syncer WriteSyncer) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	writeSyncer.w = syncer
 }
 
 func (d *dynamicWriter) Write(b []byte) (n int, err error) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	return d.w.Write(b)
 }
 
 func (d *dynamicWriter) Sync() error {
+	mutex.Lock()
+	defer mutex.Unlock()
 	return d.w.Sync()
 }
 
