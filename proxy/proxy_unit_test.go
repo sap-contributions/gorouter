@@ -213,8 +213,8 @@ var _ = Describe("Proxy Unit tests", func() {
 			logger = test_util.NewTestLogger("test")
 		})
 		DescribeTable("the returned function",
-			func(arrivedViaRouteService proxy.RouteServiceValidator, lgr *slog.Logger, forwardedClientCert string, expectedValue bool, expectedErr error) {
-				forceDeleteXFCCHeaderFunc := proxy.ForceDeleteXFCCHeader(arrivedViaRouteService, forwardedClientCert, lgr)
+			func(arrivedViaRouteService proxy.RouteServiceValidator, lgr func() *slog.Logger, forwardedClientCert string, expectedValue bool, expectedErr error) {
+				forceDeleteXFCCHeaderFunc := proxy.ForceDeleteXFCCHeader(arrivedViaRouteService, forwardedClientCert, lgr())
 				forceDelete, err := forceDeleteXFCCHeaderFunc(&http.Request{})
 				if expectedErr != nil {
 					Expect(err).To(Equal(expectedErr))
@@ -224,17 +224,17 @@ var _ = Describe("Proxy Unit tests", func() {
 				Expect(forceDelete).To(Equal(expectedValue))
 			},
 			Entry("arrivedViaRouteService returns (false, nil), forwardedClientCert == sanitize_set",
-				notArrivedViaRouteService, logger.Logger, "sanitize_set", false, nil),
+				notArrivedViaRouteService, func() *slog.Logger { return logger.Logger }, "sanitize_set", false, nil),
 			Entry("arrivedViaRouteService returns (false, nil), forwardedClientCert != sanitize_set",
-				notArrivedViaRouteService, logger.Logger, "", false, nil),
+				notArrivedViaRouteService, func() *slog.Logger { return logger.Logger }, "", false, nil),
 			Entry("arrivedViaRouteService returns (true, nil), forwardedClientCert == sanitize_set",
-				arrivedViaRouteService, logger.Logger, "sanitize_set", false, nil),
+				arrivedViaRouteService, func() *slog.Logger { return logger.Logger }, "sanitize_set", false, nil),
 			Entry("arrivedViaRouteService returns (true, nil), forwardedClientCert != sanitize_set",
-				arrivedViaRouteService, logger.Logger, "", true, nil),
+				arrivedViaRouteService, func() *slog.Logger { return logger.Logger }, "", true, nil),
 			Entry("arrivedViaRouteService returns (false, error), forwardedClientCert == sanitize_set",
-				errorViaRouteService, logger.Logger, "sanitize_set", false, errors.New("Bad route service validator")),
+				errorViaRouteService, func() *slog.Logger { return logger.Logger }, "sanitize_set", false, errors.New("Bad route service validator")),
 			Entry("arrivedViaRouteService returns (false, error), forwardedClientCert != sanitize_set",
-				errorViaRouteService, logger.Logger, "", false, errors.New("Bad route service validator")),
+				errorViaRouteService, func() *slog.Logger { return logger.Logger }, "", false, errors.New("Bad route service validator")),
 		)
 	})
 })

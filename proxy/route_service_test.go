@@ -38,7 +38,6 @@ var _ = Describe("Route Services", func() {
 	)
 
 	JustBeforeEach(func() {
-		logger = test_util.NewTestLogger("test")
 		server := &http.Server{Handler: http.HandlerFunc(routeServiceHandler)}
 		routeServiceServer.Add(1)
 		go func() {
@@ -73,7 +72,7 @@ var _ = Describe("Route Services", func() {
 
 		crypto, err := secure.NewAesGCM([]byte(cryptoKey))
 		Expect(err).ToNot(HaveOccurred())
-
+		logger = test_util.NewTestLogger("test")
 		config := routeservice.NewRouteServiceConfig(
 			logger.Logger,
 			conf.RouteServiceEnabled,
