@@ -38,7 +38,7 @@ var _ = Describe("HealthListener", func() {
 
 		healthListener = &HealthListener{
 			Port:        port,
-			HealthCheck: handlers.NewHealthcheck(h, test_util.NewTestLogger("test").Logger),
+			HealthCheck: handlers.NewHealthcheck(h, logger.Logger),
 			Router:      router,
 			Logger:      logger.Logger,
 		}
