@@ -313,7 +313,6 @@ var _ = Describe("RouteRegistry", func() {
 						Eventually(logger).ShouldNot(gbytes.Say(`uri-added.*.*a\.route`))
 					})
 				})
-
 			})
 
 			Context("when routing table sharding mode is `shared-and-segments`", func() {
@@ -344,7 +343,7 @@ var _ = Describe("RouteRegistry", func() {
 					BeforeEach(func() {
 						fooEndpoint.IsolationSegment = ""
 					})
-					It("resgisters the route", func() {
+					It("registers the route", func() {
 						r.Register("a.route", fooEndpoint)
 						Expect(r.NumUris()).To(Equal(1))
 						Expect(r.NumEndpoints()).To(Equal(1))
