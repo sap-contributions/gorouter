@@ -15,7 +15,7 @@ import (
 var (
 	dynamicLoggingConfig dynamicTimeEncoder
 	baseLogger           *slog.Logger
-	writeSyncer          = &dynamicWriter{w: zapcore.Lock(os.Stdout)}
+	writeSyncer          = &dynamicWriter{w: os.Stdout}
 	mutex                sync.Mutex
 )
 
