@@ -63,8 +63,8 @@ var _ = Describe("Set Vcap Request Id header", func() {
 	})
 
 	It("logs the header", func() {
-		Expect(logger).To(gbytes.Say("vcap-request-id-header-set"))
-		Expect(logger).To(gbytes.Say(vcapIdHeader))
+		Eventually(logger).Should(gbytes.Say("vcap-request-id-header-set"))
+		Eventually(logger).Should(gbytes.Say(vcapIdHeader))
 	})
 
 	It("sets request context", func() {
@@ -85,8 +85,8 @@ var _ = Describe("Set Vcap Request Id header", func() {
 		})
 
 		It("logs the header with trace info", func() {
-			Expect(logger).To(gbytes.Say("vcap-request-id-header-set"))
-			Expect(logger).To(gbytes.Say(`"data":{"trace-id":"11111111111111111111111111111111","span-id":"2222222222222222","VcapRequestIdHeader":"` + vcapIdHeader + `"}`))
+			Eventually(logger).Should(gbytes.Say("vcap-request-id-header-set"))
+			Eventually(logger).Should(gbytes.Say(`"data":{"trace-id":"11111111111111111111111111111111","span-id":"2222222222222222","VcapRequestIdHeader":"` + vcapIdHeader + `"}`))
 		})
 	})
 
@@ -102,8 +102,8 @@ var _ = Describe("Set Vcap Request Id header", func() {
 		})
 
 		It("logs the header", func() {
-			Expect(logger).To(gbytes.Say("vcap-request-id-header-set"))
-			Expect(logger).To(gbytes.Say(vcapIdHeader))
+			Eventually(logger).Should(gbytes.Say("vcap-request-id-header-set"))
+			Eventually(logger).Should(gbytes.Say(vcapIdHeader))
 		})
 	})
 })

@@ -97,7 +97,7 @@ var _ = Describe("NATSMonitor", func() {
 			ch <- time.Time{}
 			ch <- time.Time{}
 
-			Expect(logger).To(gbytes.Say("error-sending-buffered-messages-metric"))
+			Eventually(logger).Should(gbytes.Say("error-sending-buffered-messages-metric"))
 		})
 	})
 
@@ -117,7 +117,7 @@ var _ = Describe("NATSMonitor", func() {
 			ch <- time.Time{}
 			ch <- time.Time{}
 
-			Expect(logger).To(gbytes.Say("error-sending-total-dropped-messages-metric"))
+			Eventually(logger).Should(gbytes.Say("error-sending-total-dropped-messages-metric"))
 		})
 	})
 
@@ -129,7 +129,7 @@ var _ = Describe("NATSMonitor", func() {
 			ch <- time.Time{}
 			ch <- time.Time{}
 
-			Expect(logger).To(gbytes.Say("error-retrieving-nats-subscription-pending-messages"))
+			Eventually(logger).Should(gbytes.Say("error-retrieving-nats-subscription-pending-messages"))
 		})
 	})
 
@@ -141,7 +141,7 @@ var _ = Describe("NATSMonitor", func() {
 			ch <- time.Time{}
 			ch <- time.Time{}
 
-			Expect(logger).To(gbytes.Say("error-retrieving-nats-subscription-dropped-messages"))
+			Eventually(logger).Should(gbytes.Say("error-retrieving-nats-subscription-dropped-messages"))
 		})
 	})
 })

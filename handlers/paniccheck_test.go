@@ -54,9 +54,9 @@ var _ = Describe("Paniccheck", func() {
 
 		It("logs the panic message with Host", func() {
 			panicHandler.ServeHTTP(recorder, request, expectedPanic)
-			Expect(logger).To(gbytes.Say("somehost.com"))
-			Expect(logger).To(gbytes.Say("we expect this panic"))
-			Expect(logger).To(gbytes.Say("stacktrace"))
+			Eventually(logger).Should(gbytes.Say("somehost.com"))
+			Eventually(logger).Should(gbytes.Say("we expect this panic"))
+			Eventually(logger).Should(gbytes.Say("stacktrace"))
 		})
 	})
 

@@ -470,7 +470,7 @@ var _ = Describe("ProxyRoundTripper", func() {
 					_, err := proxyRoundTripper.RoundTrip(req)
 					Expect(err).To(MatchError(ContainSubstring("tls: handshake failure")))
 
-					Expect(logger).ToNot(gbytes.Say(`route-service`))
+					Eventually(logger).ShouldNot(gbytes.Say(`route-service`))
 				})
 
 				It("does log the error and reports the endpoint failure", func() {
@@ -494,8 +494,8 @@ var _ = Describe("ProxyRoundTripper", func() {
 					Expect(ep1).To(Equal(ep2))
 
 					logOutput := logger.Buffer()
-					Expect(logOutput).To(gbytes.Say(`backend-endpoint-failed`))
-					Expect(logOutput).To(gbytes.Say(`vcap_request_id`))
+					Eventually(logOutput).Should(gbytes.Say(`backend-endpoint-failed`))
+					Eventually(logOutput).Should(gbytes.Say(`vcap_request_id`))
 				})
 			})
 
@@ -676,8 +676,8 @@ var _ = Describe("ProxyRoundTripper", func() {
 
 				It("logs a message with `select-endpoint-failed`", func() {
 					proxyRoundTripper.RoundTrip(req)
-					Expect(logger).To(gbytes.Say(`select-endpoint-failed`))
-					Expect(logger).To(gbytes.Say(`myapp.com`))
+					Eventually(logger).Should(gbytes.Say(`select-endpoint-failed`))
+					Eventually(logger).Should(gbytes.Say(`myapp.com`))
 				})
 
 				It("does not capture any routing requests to the backend", func() {
@@ -691,14 +691,14 @@ var _ = Describe("ProxyRoundTripper", func() {
 					_, err := proxyRoundTripper.RoundTrip(req)
 					Expect(err).To(Equal(round_tripper.NoEndpointsAvailable))
 
-					Expect(logger).ToNot(gbytes.Say(`route-service`))
+					Eventually(logger).ShouldNot(gbytes.Say(`route-service`))
 				})
 
 				It("does not report the endpoint failure", func() {
 					_, err := proxyRoundTripper.RoundTrip(req)
 					Expect(err).To(MatchError(round_tripper.NoEndpointsAvailable))
 
-					Expect(logger).ToNot(gbytes.Say(`backend-endpoint-failed`))
+					Eventually(logger).ShouldNot(gbytes.Say(`backend-endpoint-failed`))
 				})
 			})
 
@@ -719,14 +719,14 @@ var _ = Describe("ProxyRoundTripper", func() {
 					_, err := proxyRoundTripper.RoundTrip(req)
 					Expect(err).ToNot(HaveOccurred())
 
-					Expect(logger).ToNot(gbytes.Say(`backend-endpoint-failed`))
+					Eventually(logger).ShouldNot(gbytes.Say(`backend-endpoint-failed`))
 				})
 
 				It("does not log anything about route services", func() {
 					_, err := proxyRoundTripper.RoundTrip(req)
 					Expect(err).ToNot(HaveOccurred())
 
-					Expect(logger).ToNot(gbytes.Say(`route-service`))
+					Eventually(logger).ShouldNot(gbytes.Say(`route-service`))
 				})
 
 			})
@@ -959,7 +959,7 @@ var _ = Describe("ProxyRoundTripper", func() {
 					It("logs the response error", func() {
 						_, err := proxyRoundTripper.RoundTrip(req)
 						Expect(err).ToNot(HaveOccurred())
-						Expect(logger).To(gbytes.Say(`response.*status-code":418`))
+						Eventually(logger).Should(gbytes.Say(`response.*status-code":418`))
 					})
 				})
 
@@ -1001,10 +1001,10 @@ var _ = Describe("ProxyRoundTripper", func() {
 						_, err := proxyRoundTripper.RoundTrip(req)
 						Expect(err).To(MatchError(dialError))
 
-						Expect(logger).ToNot(gbytes.Say(`backend-endpoint-failed`))
+						Eventually(logger).ShouldNot(gbytes.Say(`backend-endpoint-failed`))
 						for i := 0; i < 3; i++ {
-							Expect(logger).To(gbytes.Say(`route-service-connection-failed`))
-							Expect(logger).To(gbytes.Say(`foo.com`))
+							Eventually(logger).Should(gbytes.Say(`route-service-connection-failed`))
+							Eventually(logger).Should(gbytes.Say(`foo.com`))
 						}
 					})
 
@@ -1042,8 +1042,8 @@ var _ = Describe("ProxyRoundTripper", func() {
 						It("logs the error", func() {
 							_, err := proxyRoundTripper.RoundTrip(req)
 							Expect(err).To(MatchError("banana"))
-							Expect(logger).To(gbytes.Say(`route-service-connection-failed`))
-							Expect(logger).To(gbytes.Say(`foo.com`))
+							Eventually(logger).Should(gbytes.Say(`route-service-connection-failed`))
+							Eventually(logger).Should(gbytes.Say(`foo.com`))
 						})
 					})
 				})

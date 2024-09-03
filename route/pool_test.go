@@ -248,7 +248,7 @@ var _ = Describe("EndpointPool", func() {
 			})
 			iterator := poolWithLBAlgo2.Endpoints(logger.Logger, "", false, "none", "zone")
 			Expect(iterator).To(BeAssignableToTypeOf(&route.RoundRobin{}))
-			Expect(logger).To(gbytes.Say(`invalid-pool-load-balancing-algorithm`))
+			Eventually(logger).Should(gbytes.Say(`invalid-pool-load-balancing-algorithm`))
 		})
 
 		It("is correctly propagated to the newly created endpoints LOAD_BALANCE_LC ", func() {
@@ -258,7 +258,7 @@ var _ = Describe("EndpointPool", func() {
 			})
 			iterator := poolWithLBAlgoLC.Endpoints(logger.Logger, "", false, "none", "az")
 			Expect(iterator).To(BeAssignableToTypeOf(&route.LeastConnection{}))
-			Expect(logger).To(gbytes.Say(`endpoint-iterator-with-least-connection-lb-algo`))
+			Eventually(logger).Should(gbytes.Say(`endpoint-iterator-with-least-connection-lb-algo`))
 		})
 
 		It("is correctly propagated to the newly created endpoints LOAD_BALANCE_RR ", func() {
@@ -268,7 +268,7 @@ var _ = Describe("EndpointPool", func() {
 			})
 			iterator := poolWithLBAlgoLC.Endpoints(logger.Logger, "", false, "none", "az")
 			Expect(iterator).To(BeAssignableToTypeOf(&route.RoundRobin{}))
-			Expect(logger).To(gbytes.Say(`endpoint-iterator-with-round-robin-lb-algo`))
+			Eventually(logger).Should(gbytes.Say(`endpoint-iterator-with-round-robin-lb-algo`))
 		})
 	})
 
@@ -287,7 +287,7 @@ var _ = Describe("EndpointPool", func() {
 			})
 			pool.SetPoolLoadBalancingAlgorithm(endpoint)
 			Expect(pool.LoadBalancingAlgorithm).To(Equal(expectedLBAlgo))
-			Expect(logger).To(gbytes.Say(`setting-pool-load-balancing-algorithm-to-that-of-an-endpoint`))
+			Eventually(logger).Should(gbytes.Say(`setting-pool-load-balancing-algorithm-to-that-of-an-endpoint`))
 		})
 
 		It("is an empty string and the load balancing algorithm of a pool is kept", func() {
@@ -331,7 +331,7 @@ var _ = Describe("EndpointPool", func() {
 			})
 			pool.SetPoolLoadBalancingAlgorithm(endpoint)
 			Expect(pool.LoadBalancingAlgorithm).To(Equal(expectedLBAlgo))
-			Expect(logger).To(gbytes.Say(`invalid-endpoint-load-balancing-algorithm-provided-keeping-pool-lb-algo`))
+			Eventually(logger).Should(gbytes.Say(`invalid-endpoint-load-balancing-algorithm-provided-keeping-pool-lb-algo`))
 		})
 	})
 
@@ -448,7 +448,7 @@ var _ = Describe("EndpointPool", func() {
 				pool.MarkUpdated(time.Now())
 				pool.EndpointFailed(endpoint, &net.OpError{Op: "dial"})
 
-				Expect(logger).To(gbytes.Say(`prune-failed-endpoint`))
+				Eventually(logger).Should(gbytes.Say(`prune-failed-endpoint`))
 			})
 
 			It("does not prune connection reset errors", func() {

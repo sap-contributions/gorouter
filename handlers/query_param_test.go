@@ -99,8 +99,8 @@ var _ = Describe("QueryParamHandler", func() {
 				req.RequestURI = "/example?param1;param2"
 				handler.ServeHTTP(resp, req)
 
-				Expect(logger).To(gbytes.Say(`deprecated-semicolon-params`))
-				Expect(logger).To(gbytes.Say(`"data":{"vcap_request_id":"` + id + `"}`))
+				Eventually(logger).Should(gbytes.Say(`deprecated-semicolon-params`))
+				Eventually(logger).Should(gbytes.Say(`"data":{"vcap_request_id":"` + id + `"}`))
 
 				Expect(resp.Header().Get(router_http.CfRouterError)).To(Equal("deprecated-semicolon-params"))
 			})
@@ -114,7 +114,7 @@ var _ = Describe("QueryParamHandler", func() {
 					req.RequestURI = "/example?param1;param2"
 					handler.ServeHTTP(resp, req)
 
-					Expect(logger).To(gbytes.Say(`"data":{"trace-id":"1111","span-id":"2222","vcap_request_id":"` + id + `"}`))
+					Eventually(logger).Should(gbytes.Say(`"data":{"trace-id":"1111","span-id":"2222","vcap_request_id":"` + id + `"}`))
 
 					Expect(resp.Header().Get(router_http.CfRouterError)).To(Equal("deprecated-semicolon-params"))
 				})

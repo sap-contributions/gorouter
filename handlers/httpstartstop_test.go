@@ -236,7 +236,7 @@ var _ = Describe("HTTPStartStop Handler", func() {
 			handler.UseHandlerFunc(nextHandler)
 			handler.ServeHTTP(resp, req)
 
-			Expect(logger).To(gbytes.Say(`"message":"request-info-err"`))
+			Eventually(logger).Should(gbytes.Say(`"message":"request-info-err"`))
 
 			Expect(nextCalled).To(BeTrue())
 		})
@@ -250,7 +250,7 @@ var _ = Describe("HTTPStartStop Handler", func() {
 		It("calls error on the logger", func() {
 			defer func() {
 				recover()
-				Expect(logger).To(gbytes.Say(`"data":{"error":"X-Vcap-Request-Id not found"}`))
+				Eventually(logger).Should(gbytes.Say(`"data":{"error":"X-Vcap-Request-Id not found"}`))
 				Expect(nextCalled).To(BeFalse())
 			}()
 
@@ -265,7 +265,7 @@ var _ = Describe("HTTPStartStop Handler", func() {
 			It("logs message with trace info", func() {
 				defer func() {
 					recover()
-					Expect(logger).To(gbytes.Say(`"data":{"trace-id":"1111","span-id":"2222","error":"X-Vcap-Request-Id not found"}`))
+					Eventually(logger).Should(gbytes.Say(`"data":{"trace-id":"1111","span-id":"2222","error":"X-Vcap-Request-Id not found"}`))
 					Expect(nextCalled).To(BeFalse())
 				}()
 
@@ -303,7 +303,7 @@ var _ = Describe("HTTPStartStop Handler", func() {
 		})
 		It("calls Info on the logger, but does not fail the request", func() {
 			handler.ServeHTTP(resp, req)
-			Expect(logger).To(gbytes.Say(`"message":"failed-to-emit-startstop-event"`))
+			Eventually(logger).Should(gbytes.Say(`"message":"failed-to-emit-startstop-event"`))
 
 			Expect(nextCalled).To(BeTrue())
 		})

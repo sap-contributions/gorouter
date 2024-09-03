@@ -170,7 +170,7 @@ var _ = Describe("Reporter Handler", func() {
 		It("calls Panic on the logger", func() {
 			defer func() {
 				recover()
-				Expect(logger).To(gbytes.Say(`"error":"RequestInfo not set on context"`))
+				Eventually(logger).Should(gbytes.Say(`"error":"RequestInfo not set on context"`))
 				Expect(nextCalled).To(BeFalse())
 			}()
 			badHandler.ServeHTTP(resp, req)

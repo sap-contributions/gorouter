@@ -108,7 +108,7 @@ var _ = Describe("W3C", func() {
 
 						Expect(traceparentHeader).To(BeEmpty())
 
-						Expect(logger).To(gbytes.Say(`failed-to-create-w3c-traceparent`))
+						Eventually(logger).Should(gbytes.Say(`failed-to-create-w3c-traceparent`))
 					})
 				})
 
