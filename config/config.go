@@ -15,7 +15,7 @@ import (
 
 	"code.cloudfoundry.org/localip"
 	"go.step.sm/crypto/pemutil"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 const (
