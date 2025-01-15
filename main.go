@@ -131,10 +131,18 @@ func main() {
 	}
 
 	sender := metric_sender.NewMetricSender(dropsonde.AutowiredEmitter())
+	var metricsRegistry *mr.Registry
+	if c.Prometheus.Port != 0 && c.Prometheus.CertPath != "" {
+		metricsRegistry = mr.NewRegistry(log.Default(),
+			mr.WithTLSServer(int(c.Prometheus.Port), c.Prometheus.CertPath, c.Prometheus.KeyPath, c.Prometheus.CAPath))
+	} else if c.Prometheus.Port != 0 {
+		metricsRegistry = mr.NewRegistry(log.Default(),
+			mr.WithServer(int(c.Prometheus.Port)))
+	}
 
 	metricsReporter := initializeMetrics(sender, c, grlog.CreateLoggerWithSource(prefix, "metricsreporter"))
 	fdMonitor := initializeFDMonitor(sender, grlog.CreateLoggerWithSource(prefix, "FileDescriptor"))
-	registry := rregistry.NewRouteRegistry(grlog.CreateLoggerWithSource(prefix, "registry"), c, metricsReporter)
+	registry := rregistry.NewRouteRegistry(grlog.CreateLoggerWithSource(prefix, "registry"), c, metricsReporter, metricsRegistry)
 	if c.SuspendPruningIfNatsUnavailable {
 		registry.SuspendPruning(func() bool { return !(natsClient.Status() == nats.CONNECTED) })
 	}
@@ -192,12 +200,6 @@ func main() {
 	rss, err := router.NewRouteServicesServer(c)
 	if err != nil {
 		grlog.Fatal(logger, "new-route-services-server", grlog.ErrAttr(err))
-	}
-
-	var metricsRegistry *mr.Registry
-	if c.Prometheus.Port != 0 {
-		metricsRegistry = mr.NewRegistry(log.Default(),
-			mr.WithTLSServer(int(c.Prometheus.Port), c.Prometheus.CertPath, c.Prometheus.KeyPath, c.Prometheus.CAPath))
 	}
 
 	h = &health.Health{}

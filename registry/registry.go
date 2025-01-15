@@ -4,15 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
+	"unsafe"
 
+	mr "code.cloudfoundry.org/go-metric-registry"
 	"code.cloudfoundry.org/gorouter/config"
 	log "code.cloudfoundry.org/gorouter/logger"
 	"code.cloudfoundry.org/gorouter/metrics"
 	"code.cloudfoundry.org/gorouter/registry/container"
 	"code.cloudfoundry.org/gorouter/route"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 //go:generate counterfeiter -o fakes/fake_registry.go . Registry
@@ -46,6 +50,7 @@ type RouteRegistry struct {
 	dropletStaleThreshold      time.Duration
 
 	reporter metrics.RouteRegistryReporter
+	metrics  registryMetrics
 
 	ticker           *time.Ticker
 	timeOfLastUpdate time.Time
@@ -61,10 +66,36 @@ type RouteRegistry struct {
 	DefaultLoadBalancingAlgorithm string
 }
 
-func NewRouteRegistry(logger *slog.Logger, c *config.Config, reporter metrics.RouteRegistryReporter) *RouteRegistry {
+type registryMetrics struct {
+	routeRegistration *prometheus.CounterVec
+}
+
+func newRegistryMetrics(registry *mr.Registry) registryMetrics {
+	// The interface provided by the library massively restricts the usability of the prometheus
+	// library. If we are to implement this we either need to contribute a lot to the library or
+	// consume prometheus directly. Either way: what comes next is a no-go and has to be removed.
+
+	promRegV := reflect.ValueOf(registry).Elem().FieldByName("registerer")
+	promReg := reflect.NewAt(promRegV.Type(), unsafe.Pointer(promRegV.UnsafeAddr())).Interface().(*prometheus.Registerer)
+
+	reg := registryMetrics{
+		routeRegistration: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "route_registration", // TODO: fix name
+			Help: "number of route registration messages",
+		}, []string{"update_type"}),
+	}
+
+	(*promReg).MustRegister(reg.routeRegistration)
+
+	return reg
+}
+
+func NewRouteRegistry(logger *slog.Logger, c *config.Config, reporter metrics.RouteRegistryReporter, registry *mr.Registry) *RouteRegistry {
 	r := &RouteRegistry{}
 	r.logger = logger
 	r.byURI = container.NewTrie()
+
+	r.metrics = newRegistryMetrics(registry)
 
 	r.pruneStaleDropletsInterval = c.PruneStaleDropletsInterval
 	r.dropletStaleThreshold = c.DropletStaleThreshold
@@ -89,7 +120,8 @@ func (r *RouteRegistry) Register(uri route.Uri, endpoint *route.Endpoint) {
 
 	endpointAdded := r.register(uri, endpoint)
 
-	r.reporter.CaptureRegistryMessage(endpoint)
+	// r.reporter.CaptureRegistryMessage(endpoint)
+	r.metrics.routeRegistration.WithLabelValues(endpointAdded.String()).Inc()
 
 	if endpointAdded == route.ADDED && !endpoint.UpdatedAt.IsZero() {
 		r.reporter.CaptureRouteRegistrationLatency(time.Since(endpoint.UpdatedAt))
