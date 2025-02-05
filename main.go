@@ -1,11 +1,11 @@
 package main
 
 import (
+	"code.cloudfoundry.org/gorouter/metrics_prometheus"
 	"context"
 	"crypto/tls"
 	"flag"
 	"fmt"
-	"log"
 	"log/slog"
 	"os"
 	"runtime"
@@ -14,7 +14,6 @@ import (
 
 	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/debugserver"
-	mr "code.cloudfoundry.org/go-metric-registry"
 	"code.cloudfoundry.org/lager/v3"
 	"code.cloudfoundry.org/tlsconfig"
 	"github.com/cloudfoundry/dropsonde"
@@ -130,11 +129,18 @@ func main() {
 
 	}
 
+	// setup metrics via dropsonse
 	sender := metric_sender.NewMetricSender(dropsonde.AutowiredEmitter())
 
 	metricsReporter := initializeMetrics(sender, c, grlog.CreateLoggerWithSource(prefix, "metricsreporter"))
+
+	// setup metrics via prometheus
+	metricsRegistry := metrics_prometheus.NewMetricsRegistry(c.Prometheus)
+	routeRegistryMetrics := metrics_prometheus.NewRouteRegistryMetrics(metricsRegistry, c.PerRequestMetricsReporting)
+
 	fdMonitor := initializeFDMonitor(sender, grlog.CreateLoggerWithSource(prefix, "FileDescriptor"))
-	registry := rregistry.NewRouteRegistry(grlog.CreateLoggerWithSource(prefix, "registry"), c, metricsReporter)
+	registry := rregistry.NewRouteRegistry(grlog.CreateLoggerWithSource(prefix, "registry"), c, metricsReporter, routeRegistryMetrics)
+
 	if c.SuspendPruningIfNatsUnavailable {
 		registry.SuspendPruning(func() bool { return !(natsClient.Status() == nats.CONNECTED) })
 	}
@@ -192,12 +198,6 @@ func main() {
 	rss, err := router.NewRouteServicesServer(c)
 	if err != nil {
 		grlog.Fatal(logger, "new-route-services-server", grlog.ErrAttr(err))
-	}
-
-	var metricsRegistry *mr.Registry
-	if c.Prometheus.Port != 0 {
-		metricsRegistry = mr.NewRegistry(log.Default(),
-			mr.WithTLSServer(int(c.Prometheus.Port), c.Prometheus.CertPath, c.Prometheus.KeyPath, c.Prometheus.CAPath))
 	}
 
 	h = &health.Health{}

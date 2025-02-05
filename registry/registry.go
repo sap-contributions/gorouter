@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"code.cloudfoundry.org/gorouter/metrics_prometheus"
 	"context"
 	"encoding/json"
 	"log/slog"
@@ -46,6 +47,7 @@ type RouteRegistry struct {
 	dropletStaleThreshold      time.Duration
 
 	reporter metrics.RouteRegistryReporter
+	metrics  *metrics_prometheus.Metrics
 
 	ticker           *time.Ticker
 	timeOfLastUpdate time.Time
@@ -61,7 +63,7 @@ type RouteRegistry struct {
 	DefaultLoadBalancingAlgorithm string
 }
 
-func NewRouteRegistry(logger *slog.Logger, c *config.Config, reporter metrics.RouteRegistryReporter) *RouteRegistry {
+func NewRouteRegistry(logger *slog.Logger, c *config.Config, reporter metrics.RouteRegistryReporter, routeRegistryMetrics *metrics_prometheus.Metrics) *RouteRegistry {
 	r := &RouteRegistry{}
 	r.logger = logger
 	r.byURI = container.NewTrie()
@@ -71,6 +73,8 @@ func NewRouteRegistry(logger *slog.Logger, c *config.Config, reporter metrics.Ro
 	r.suspendPruning = func() bool { return false }
 
 	r.reporter = reporter
+
+	r.metrics = routeRegistryMetrics
 
 	r.routingTableShardingMode = c.RoutingTableShardingMode
 	r.isolationSegments = c.IsolationSegments
@@ -92,15 +96,20 @@ func (r *RouteRegistry) Register(uri route.Uri, endpoint *route.Endpoint) {
 	r.reporter.CaptureRegistryMessage(endpoint)
 
 	if endpointAdded == route.ADDED && !endpoint.UpdatedAt.IsZero() {
+		r.metrics.CaptureRouteRegistrationLatency(time.Since(endpoint.UpdatedAt))
 		r.reporter.CaptureRouteRegistrationLatency(time.Since(endpoint.UpdatedAt))
 	}
 
 	switch endpointAdded {
 	case route.ADDED:
+		r.metrics.CaptureRegistryMessageWithLabel(endpoint.Component(), route.ADDED.String())
+
 		if r.logger.Enabled(context.Background(), slog.LevelInfo) {
 			r.logger.Info("endpoint-registered", buildSlogAttrs(uri, endpoint)...)
 		}
 	case route.UPDATED:
+		r.metrics.CaptureRegistryMessageWithLabel(endpoint.Component(), route.UPDATED.String())
+
 		if r.logger.Enabled(context.Background(), slog.LevelDebug) {
 			r.logger.Debug("endpoint-registered", buildSlogAttrs(uri, endpoint)...)
 		}
@@ -212,8 +221,9 @@ func (r *RouteRegistry) Lookup(uri route.Uri) *route.EndpointPool {
 	pool := r.lookup(uri)
 
 	endLookup := time.Now()
-	r.reporter.CaptureLookupTime(endLookup.Sub(started))
-
+	lookUpTime := endLookup.Sub(started)
+	r.reporter.CaptureLookupTime(lookUpTime)
+	r.metrics.CaptureLookupTime(lookUpTime)
 	return pool
 }
 
@@ -289,6 +299,8 @@ func (r *RouteRegistry) StartPruningCycle() {
 				r.pruneStaleDroplets()
 				r.logger.Debug("finished-pruning-routes")
 				r.reporter.CaptureRouteStats(r.NumUris(), r.MSSinceLastUpdate())
+				r.metrics.CaptureTotalRoutes(r.NumUris())
+				r.metrics.CaptureTimeSinceLastRegistryUpdate(r.MSSinceLastUpdate())
 			}
 		}()
 	}
@@ -390,6 +402,7 @@ func (r *RouteRegistry) pruneStaleDroplets() {
 				slog.String("isolation_segment", isolationSegment),
 			)
 			r.reporter.CaptureRoutesPruned(uint64(len(endpoints)))
+			r.metrics.CaptureRoutesPruned(float64(len(endpoints)))
 		}
 	})
 }

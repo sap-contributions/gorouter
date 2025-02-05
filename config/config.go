@@ -112,6 +112,7 @@ var defaultStatusConfig = StatusConfig{
 }
 
 type PrometheusConfig struct {
+	Enabled  bool   `yaml:"enabled"`
 	Port     uint16 `yaml:"port"`
 	CertPath string `yaml:"cert_path"`
 	KeyPath  string `yaml:"key_path"`
