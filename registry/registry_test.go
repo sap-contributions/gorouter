@@ -1,6 +1,7 @@
 package registry_test
 
 import (
+	"code.cloudfoundry.org/gorouter/metrics"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -42,7 +43,7 @@ var _ = Describe("RouteRegistry", func() {
 
 		reporter = new(fakes.FakeRouteRegistryReporter)
 
-		r = NewRouteRegistry(logger.Logger, configObj, reporter)
+		r = NewRouteRegistry(logger.Logger, configObj, []metrics.RouteRegistryReporter{reporter})
 		fooEndpoint = route.NewEndpoint(&route.EndpointOpts{
 			Host: "192.168.1.1",
 			Tags: map[string]string{
@@ -281,7 +282,7 @@ var _ = Describe("RouteRegistry", func() {
 			Context("when routing table sharding mode is `segments`", func() {
 				BeforeEach(func() {
 					configObj.RoutingTableShardingMode = config.SHARD_SEGMENTS
-					r = NewRouteRegistry(logger.Logger, configObj, reporter)
+					r = NewRouteRegistry(logger.Logger, configObj, []metrics.RouteRegistryReporter{reporter})
 					fooEndpoint.IsolationSegment = "foo"
 					barEndpoint.IsolationSegment = "bar"
 					bar2Endpoint.IsolationSegment = "baz"
@@ -318,7 +319,7 @@ var _ = Describe("RouteRegistry", func() {
 			Context("when routing table sharding mode is `shared-and-segments`", func() {
 				BeforeEach(func() {
 					configObj.RoutingTableShardingMode = config.SHARD_SHARED_AND_SEGMENTS
-					r = NewRouteRegistry(logger.Logger, configObj, reporter)
+					r = NewRouteRegistry(logger.Logger, configObj, []metrics.RouteRegistryReporter{reporter})
 					fooEndpoint.IsolationSegment = "foo"
 					barEndpoint.IsolationSegment = "bar"
 					bar2Endpoint.IsolationSegment = "baz"
@@ -667,7 +668,7 @@ var _ = Describe("RouteRegistry", func() {
 		Context("when routing table sharding mode is `segments`", func() {
 			BeforeEach(func() {
 				configObj.RoutingTableShardingMode = config.SHARD_SEGMENTS
-				r = NewRouteRegistry(logger.Logger, configObj, reporter)
+				r = NewRouteRegistry(logger.Logger, configObj, []metrics.RouteRegistryReporter{reporter})
 				fooEndpoint.IsolationSegment = "foo"
 				barEndpoint.IsolationSegment = "bar"
 				bar2Endpoint.IsolationSegment = "bar"
@@ -713,7 +714,7 @@ var _ = Describe("RouteRegistry", func() {
 		Context("when routing table sharding mode is `shared-and-segments`", func() {
 			BeforeEach(func() {
 				configObj.RoutingTableShardingMode = config.SHARD_SHARED_AND_SEGMENTS
-				r = NewRouteRegistry(logger.Logger, configObj, reporter)
+				r = NewRouteRegistry(logger.Logger, configObj, []metrics.RouteRegistryReporter{reporter})
 				fooEndpoint.IsolationSegment = "foo"
 				barEndpoint.IsolationSegment = "bar"
 				bar2Endpoint.IsolationSegment = "bar"
@@ -1331,7 +1332,7 @@ var _ = Describe("RouteRegistry", func() {
 				reporter = new(fakes.FakeRouteRegistryReporter)
 				fooEndpoint.StaleThreshold = configObj.DropletStaleThreshold
 
-				r = NewRouteRegistry(logger.Logger, configObj, reporter)
+				r = NewRouteRegistry(logger.Logger, configObj, []metrics.RouteRegistryReporter{reporter})
 			})
 
 			It("sends route metrics to the reporter", func() {
@@ -1360,7 +1361,7 @@ var _ = Describe("RouteRegistry", func() {
 				configObj.DropletStaleThreshold = 1 * time.Second
 				reporter = new(fakes.FakeRouteRegistryReporter)
 
-				r = NewRouteRegistry(logger.Logger, configObj, reporter)
+				r = NewRouteRegistry(logger.Logger, configObj, []metrics.RouteRegistryReporter{reporter})
 			})
 
 			It("does not log the route info for fresh routes when pruning", func() {

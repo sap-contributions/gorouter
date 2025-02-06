@@ -30,20 +30,19 @@ var _ = Describe("Metrics", func() {
 
 		It("sends number of nats messages received from each component", func() {
 			endpoint.Tags = map[string]string{}
-			m.CaptureRegistryMessageWithLabel(endpoint.Component(), route.ADDED.String())
+			m.CaptureRegistryMessage(endpoint)
 
-			Expect(getMetrics(r.Port())).To(ContainSubstring("registry_message{component_name=\"\",update_type=\"added\"} 1"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("registry_message{component_name=\"\"} 1"))
 		})
 
 		It("sends number of nats messages received from each component", func() {
 			endpoint.Tags = map[string]string{"component": "uaa"}
-			m.CaptureRegistryMessageWithLabel(endpoint.Component(), route.UPDATED.String())
-			Expect(getMetrics(r.Port())).To(ContainSubstring("registry_message{component_name=\"uaa\",update_type=\"updated\"} 1"))
+			m.CaptureRegistryMessage(endpoint)
+			Expect(getMetrics(r.Port())).To(ContainSubstring("registry_message{component_name=\"uaa\"} 1"))
 
 			endpoint.Tags = map[string]string{"component": "route-emitter"}
-			m.CaptureRegistryMessageWithLabel(endpoint.Component(), route.UPDATED.String())
-			Expect(getMetrics(r.Port())).To(ContainSubstring("registry_message{component_name=\"route-emitter\",update_type=\"updated\"} 1"))
-
+			m.CaptureRegistryMessage(endpoint)
+			Expect(getMetrics(r.Port())).To(ContainSubstring("registry_message{component_name=\"route-emitter\"} 1"))
 		})
 
 		It("sends the total routes", func() {
@@ -81,7 +80,6 @@ var _ = Describe("Metrics", func() {
 			})
 		})
 	})
-
 })
 
 func getMetrics(port string) string {

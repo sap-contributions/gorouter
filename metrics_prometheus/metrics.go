@@ -3,6 +3,7 @@ package metrics_prometheus
 import (
 	mr "code.cloudfoundry.org/go-metric-registry"
 	"code.cloudfoundry.org/gorouter/config"
+	"code.cloudfoundry.org/gorouter/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"log"
 	"net/http"
@@ -11,6 +12,8 @@ import (
 	"time"
 	"unsafe"
 )
+
+var _ metrics.RouteRegistryReporter = &Metrics{}
 
 // Metrics represents a prometheus metrics endpoint.
 type Metrics struct {
@@ -24,8 +27,13 @@ type Metrics struct {
 	TimeSinceLastRegistryUpdate prometheus.Gauge
 	RouteLookupTime             prometheus.Gauge
 	RouteRegistrationLatency    prometheus.Gauge
-	perRequestMetricsReporting  bool
-	unmuzzled                   uint64
+	BadRequest                  prometheus.Counter
+	// lookup metrics
+	// error handler metrics
+	// proxy round tripper metrics
+	// reporter metrics
+	perRequestMetricsReporting bool
+	unmuzzled                  uint64
 }
 
 func NewMetricsRegistry(config config.PrometheusConfig) *mr.Registry {
@@ -56,7 +64,7 @@ func NewRouteRegistryMetrics(registry *mr.Registry, perRequestMetricsReporting b
 		RouteRegistration: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "registry_message",
 			Help: "number of route registration messages",
-		}, []string{"update_type", "component_name"}),
+		}, []string{"component_name"}),
 		RouteUnregistration: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "unregistry_message",
 			Help: "number of route unregister messages",
@@ -94,34 +102,34 @@ func NewRouteRegistryMetrics(registry *mr.Registry, perRequestMetricsReporting b
 	return m
 }
 
-func (metrics *Metrics) CaptureRegistryMessageWithLabel(component string, updateType string) {
+func (metrics *Metrics) CaptureRouteStats(totalRoutes int, msSinceLastUpdate int64) {
 	if !metrics.isPrometheusEnabled() {
 		return
 	}
-
-	if component != "" {
-		metrics.RouteRegistration.WithLabelValues(updateType, component).Inc()
-	} else {
-		metrics.RouteRegistration.WithLabelValues(updateType, "").Inc()
-	}
+	metrics.TotalRoutes.Set(float64(totalRoutes))
+	metrics.TimeSinceLastRegistryUpdate.Set(float64(msSinceLastUpdate))
 }
 
-func (metrics *Metrics) CaptureUnregistryMessageWithLabel(component string, updateType string) {
+func (metrics *Metrics) CaptureRegistryMessage(msg metrics.ComponentTagged) {
 	if !metrics.isPrometheusEnabled() {
 		return
 	}
-	if component != "" {
-		metrics.RouteUnregistration.WithLabelValues(updateType, component).Inc()
-	} else {
-		metrics.RouteUnregistration.WithLabelValues(updateType, "").Inc()
-	}
+
+	metrics.RouteRegistration.WithLabelValues(msg.Component()).Inc()
 }
 
-func (metrics *Metrics) CaptureRoutesPruned(routesPruned float64) {
+func (metrics *Metrics) CaptureUnregistryMessage(msg metrics.ComponentTagged) {
 	if !metrics.isPrometheusEnabled() {
 		return
 	}
-	metrics.RoutesPruned.Add(routesPruned)
+	metrics.RouteUnregistration.WithLabelValues(msg.Component()).Inc()
+}
+
+func (metrics *Metrics) CaptureRoutesPruned(routesPruned uint64) {
+	if !metrics.isPrometheusEnabled() {
+		return
+	}
+	metrics.RoutesPruned.Add(float64(routesPruned))
 }
 
 func (metrics *Metrics) CaptureTotalRoutes(totalRoutes int) {
@@ -161,6 +169,14 @@ func (metrics *Metrics) UnmuzzleRouteRegistrationLatency() {
 		return
 	}
 	atomic.StoreUint64(&metrics.unmuzzled, 1)
+}
+
+func (metrics *Metrics) CaptureBadRequest() {
+	if !metrics.isPrometheusEnabled() {
+		return
+	}
+
+	metrics.BadRequest.Inc()
 }
 
 func (metrics *Metrics) isPrometheusEnabled() bool {

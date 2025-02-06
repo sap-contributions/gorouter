@@ -1,7 +1,6 @@
 package registry
 
 import (
-	"code.cloudfoundry.org/gorouter/metrics_prometheus"
 	"context"
 	"encoding/json"
 	"log/slog"
@@ -46,8 +45,7 @@ type RouteRegistry struct {
 	pruneStaleDropletsInterval time.Duration
 	dropletStaleThreshold      time.Duration
 
-	reporter metrics.RouteRegistryReporter
-	metrics  *metrics_prometheus.Metrics
+	reporters []metrics.RouteRegistryReporter
 
 	ticker           *time.Ticker
 	timeOfLastUpdate time.Time
@@ -63,7 +61,7 @@ type RouteRegistry struct {
 	DefaultLoadBalancingAlgorithm string
 }
 
-func NewRouteRegistry(logger *slog.Logger, c *config.Config, reporter metrics.RouteRegistryReporter, routeRegistryMetrics *metrics_prometheus.Metrics) *RouteRegistry {
+func NewRouteRegistry(logger *slog.Logger, c *config.Config, reporters []metrics.RouteRegistryReporter) *RouteRegistry {
 	r := &RouteRegistry{}
 	r.logger = logger
 	r.byURI = container.NewTrie()
@@ -72,9 +70,7 @@ func NewRouteRegistry(logger *slog.Logger, c *config.Config, reporter metrics.Ro
 	r.dropletStaleThreshold = c.DropletStaleThreshold
 	r.suspendPruning = func() bool { return false }
 
-	r.reporter = reporter
-
-	r.metrics = routeRegistryMetrics
+	r.reporters = reporters
 
 	r.routingTableShardingMode = c.RoutingTableShardingMode
 	r.isolationSegments = c.IsolationSegments
@@ -93,23 +89,20 @@ func (r *RouteRegistry) Register(uri route.Uri, endpoint *route.Endpoint) {
 
 	endpointAdded := r.register(uri, endpoint)
 
-	r.reporter.CaptureRegistryMessage(endpoint)
+	for _, reporter := range r.reporters {
+		reporter.CaptureRegistryMessage(endpoint)
 
-	if endpointAdded == route.ADDED && !endpoint.UpdatedAt.IsZero() {
-		r.metrics.CaptureRouteRegistrationLatency(time.Since(endpoint.UpdatedAt))
-		r.reporter.CaptureRouteRegistrationLatency(time.Since(endpoint.UpdatedAt))
+		if endpointAdded == route.ADDED && !endpoint.UpdatedAt.IsZero() {
+			reporter.CaptureRouteRegistrationLatency(time.Since(endpoint.UpdatedAt))
+		}
 	}
 
 	switch endpointAdded {
 	case route.ADDED:
-		r.metrics.CaptureRegistryMessageWithLabel(endpoint.Component(), route.ADDED.String())
-
 		if r.logger.Enabled(context.Background(), slog.LevelInfo) {
 			r.logger.Info("endpoint-registered", buildSlogAttrs(uri, endpoint)...)
 		}
 	case route.UPDATED:
-		r.metrics.CaptureRegistryMessageWithLabel(endpoint.Component(), route.UPDATED.String())
-
 		if r.logger.Enabled(context.Background(), slog.LevelDebug) {
 			r.logger.Debug("endpoint-registered", buildSlogAttrs(uri, endpoint)...)
 		}
@@ -118,6 +111,7 @@ func (r *RouteRegistry) Register(uri route.Uri, endpoint *route.Endpoint) {
 			r.logger.Debug("endpoint-not-registered", buildSlogAttrs(uri, endpoint)...)
 		}
 	}
+
 }
 
 func (r *RouteRegistry) register(uri route.Uri, endpoint *route.Endpoint) route.PoolPutResult {
@@ -179,7 +173,9 @@ func (r *RouteRegistry) Unregister(uri route.Uri, endpoint *route.Endpoint) {
 
 	r.unregister(uri, endpoint)
 
-	r.reporter.CaptureUnregistryMessage(endpoint)
+	for _, reporter := range r.reporters {
+		reporter.CaptureUnregistryMessage(endpoint)
+	}
 }
 
 func (r *RouteRegistry) unregister(uri route.Uri, endpoint *route.Endpoint) {
@@ -222,8 +218,9 @@ func (r *RouteRegistry) Lookup(uri route.Uri) *route.EndpointPool {
 
 	endLookup := time.Now()
 	lookUpTime := endLookup.Sub(started)
-	r.reporter.CaptureLookupTime(lookUpTime)
-	r.metrics.CaptureLookupTime(lookUpTime)
+	for _, reporter := range r.reporters {
+		reporter.CaptureLookupTime(lookUpTime)
+	}
 	return pool
 }
 
@@ -298,9 +295,9 @@ func (r *RouteRegistry) StartPruningCycle() {
 				r.logger.Debug("start-pruning-routes")
 				r.pruneStaleDroplets()
 				r.logger.Debug("finished-pruning-routes")
-				r.reporter.CaptureRouteStats(r.NumUris(), r.MSSinceLastUpdate())
-				r.metrics.CaptureTotalRoutes(r.NumUris())
-				r.metrics.CaptureTimeSinceLastRegistryUpdate(r.MSSinceLastUpdate())
+				for _, reporter := range r.reporters {
+					reporter.CaptureRouteStats(r.NumUris(), r.MSSinceLastUpdate())
+				}
 			}
 		}()
 	}
@@ -401,8 +398,10 @@ func (r *RouteRegistry) pruneStaleDroplets() {
 				slog.Any("endpoints", addresses),
 				slog.String("isolation_segment", isolationSegment),
 			)
-			r.reporter.CaptureRoutesPruned(uint64(len(endpoints)))
-			r.metrics.CaptureRoutesPruned(float64(len(endpoints)))
+			for _, reporter := range r.reporters {
+				reporter.CaptureRoutesPruned(uint64(len(endpoints)))
+			}
+
 		}
 	})
 }

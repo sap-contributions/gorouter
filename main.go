@@ -137,9 +137,9 @@ func main() {
 	// setup metrics via prometheus
 	metricsRegistry := metrics_prometheus.NewMetricsRegistry(c.Prometheus)
 	routeRegistryMetrics := metrics_prometheus.NewRouteRegistryMetrics(metricsRegistry, c.PerRequestMetricsReporting)
-
+	metricsReporters := []metrics.RouteRegistryReporter{metricsReporter, routeRegistryMetrics}
 	fdMonitor := initializeFDMonitor(sender, grlog.CreateLoggerWithSource(prefix, "FileDescriptor"))
-	registry := rregistry.NewRouteRegistry(grlog.CreateLoggerWithSource(prefix, "registry"), c, metricsReporter, routeRegistryMetrics)
+	registry := rregistry.NewRouteRegistry(grlog.CreateLoggerWithSource(prefix, "registry"), c, metricsReporters)
 
 	if c.SuspendPruningIfNatsUnavailable {
 		registry.SuspendPruning(func() bool { return !(natsClient.Status() == nats.CONNECTED) })
@@ -258,8 +258,9 @@ func main() {
 
 	go func() {
 		time.Sleep(c.RouteLatencyMetricMuzzleDuration) // this way we avoid reporting metrics for pre-existing routes
-		metricsReporter.UnmuzzleRouteRegistrationLatency()
-		routeRegistryMetrics.UnmuzzleRouteRegistrationLatency()
+		for _, reporter := range metricsReporters {
+			reporter.UnmuzzleRouteRegistrationLatency()
+		}
 	}()
 
 	<-monitor.Ready()
