@@ -259,6 +259,7 @@ func main() {
 	go func() {
 		time.Sleep(c.RouteLatencyMetricMuzzleDuration) // this way we avoid reporting metrics for pre-existing routes
 		metricsReporter.UnmuzzleRouteRegistrationLatency()
+		routeRegistryMetrics.UnmuzzleRouteRegistrationLatency()
 	}()
 
 	<-monitor.Ready()

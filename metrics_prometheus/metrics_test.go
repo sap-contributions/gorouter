@@ -21,6 +21,7 @@ var _ = Describe("Metrics", func() {
 		var endpoint *route.Endpoint
 
 		BeforeEach(func() {
+			var perRequestMetricsReporting = true
 			var config = config.PrometheusConfig{Port: 0}
 			r = NewMetricsRegistry(config)
 			m = NewRouteRegistryMetrics(r, perRequestMetricsReporting)
@@ -31,7 +32,7 @@ var _ = Describe("Metrics", func() {
 			endpoint.Tags = map[string]string{}
 			m.CaptureRegistryMessageWithLabel(endpoint.Component(), route.ADDED.String())
 
-			Expect(getMetrics(r.Port())).To(ContainSubstring("registry_message{component_name=\"\",update_type=\"added\"}"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("registry_message{component_name=\"\",update_type=\"added\"} 1"))
 		})
 
 		It("sends number of nats messages received from each component", func() {
@@ -47,7 +48,6 @@ var _ = Describe("Metrics", func() {
 
 		It("sends the total routes", func() {
 			m.CaptureTotalRoutes(12)
-			time.Sleep(100 * time.Millisecond)
 			Expect(getMetrics(r.Port())).To(ContainSubstring("total_routes 12"))
 		})
 
@@ -60,25 +60,25 @@ var _ = Describe("Metrics", func() {
 		It("sends the lookup time for routing table", func() {
 			m.CaptureLookupTime(time.Duration(955) * time.Millisecond)
 
-			Expect(getMetrics(r.Port())).To(ContainSubstring("total_routes"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("route_lookup_time 9.55e+08"))
 		})
-	})
 
-	It("increments the routes_pruned metric", func() {
-		m.CaptureRoutesPruned(50)
-		Expect(getMetrics(r.Port())).To(ContainSubstring(`routes_pruned 50`))
-	})
-
-	Describe("CaptureRouteRegistrationLatency", func() {
-		It("is muzzled by default", func() {
-			m.CaptureRouteRegistrationLatency(2 * time.Second)
-
-			Expect(getMetrics).To(ContainSubstring("route_registration_latency 2000"))
+		It("increments the routes_pruned metric", func() {
+			m.CaptureRoutesPruned(50)
+			Expect(getMetrics(r.Port())).To(ContainSubstring(`routes_pruned 50`))
 		})
-		It("sends router registration latency when unmuzzled", func() {
-			m.UnmuzzleRouteRegistrationLatency()
-			m.CaptureRouteRegistrationLatency(2 * time.Second)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("route_registration_latency 2000"))
+
+		Describe("CaptureRouteRegistrationLatency", func() {
+			It("is muzzled by default", func() {
+				m.CaptureRouteRegistrationLatency(2 * time.Second)
+
+				Expect(getMetrics(r.Port())).To(ContainSubstring("route_registration_latency 2000"))
+			})
+			It("sends router registration latency when unmuzzled", func() {
+				m.UnmuzzleRouteRegistrationLatency()
+				m.CaptureRouteRegistrationLatency(2 * time.Second)
+				Expect(getMetrics(r.Port())).To(ContainSubstring("route_registration_latency 2000"))
+			})
 		})
 	})
 
@@ -86,7 +86,6 @@ var _ = Describe("Metrics", func() {
 
 func getMetrics(port string) string {
 	addr := fmt.Sprintf("http://127.0.0.1:%s/metrics", port)
-	fmt.Print(addr)
 	resp, err := http.Get(addr) //nolint:gosec
 	if err != nil {
 		return ""

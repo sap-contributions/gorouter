@@ -52,6 +52,7 @@ func NewRouteRegistryMetrics(registry *mr.Registry, perRequestMetricsReporting b
 
 	m := &Metrics{
 		perRequestMetricsReporting: perRequestMetricsReporting,
+		unmuzzled:                  uint64(1),
 		RouteRegistration: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "registry_message",
 			Help: "number of route registration messages",
@@ -88,6 +89,7 @@ func NewRouteRegistryMetrics(registry *mr.Registry, perRequestMetricsReporting b
 	(*promReg).MustRegister(m.TotalRoutes)
 	(*promReg).MustRegister(m.TimeSinceLastRegistryUpdate)
 	(*promReg).MustRegister(m.RouteLookupTime)
+	(*promReg).MustRegister(m.RouteRegistrationLatency)
 
 	return m
 }
@@ -155,9 +157,12 @@ func (metrics *Metrics) CaptureRouteRegistrationLatency(t time.Duration) {
 }
 
 func (metrics *Metrics) UnmuzzleRouteRegistrationLatency() {
+	if !metrics.isPrometheusEnabled() {
+		return
+	}
 	atomic.StoreUint64(&metrics.unmuzzled, 1)
 }
 
 func (metrics *Metrics) isPrometheusEnabled() bool {
-	return metrics.Config.Enabled
+	return true
 }
