@@ -87,15 +87,15 @@ func (r *RouteRegistry) Register(uri route.Uri, endpoint *route.Endpoint) {
 		return
 	}
 
-	endpointAdded := r.register(uri, endpoint)
+	result := r.register(uri, endpoint)
 
-	r.multiReporter.CaptureRegistryMessage(endpoint)
+	r.multiReporter.CaptureRegistryMessage(endpoint, result.String())
 
-	if endpointAdded == route.ADDED && !endpoint.UpdatedAt.IsZero() {
+	if result == route.ADDED && !endpoint.UpdatedAt.IsZero() {
 		r.multiReporter.CaptureRouteRegistrationLatency(time.Since(endpoint.UpdatedAt))
 	}
 
-	switch endpointAdded {
+	switch result {
 	case route.ADDED:
 		if r.logger.Enabled(context.Background(), slog.LevelInfo) {
 			r.logger.Info("endpoint-registered", buildSlogAttrs(uri, endpoint)...)
@@ -213,9 +213,7 @@ func (r *RouteRegistry) Lookup(uri route.Uri) *route.EndpointPool {
 
 	pool := r.lookup(uri)
 
-	endLookup := time.Now()
-	lookUpTime := endLookup.Sub(started)
-	r.multiReporter.CaptureLookupTime(lookUpTime)
+	r.multiReporter.CaptureLookupTime(time.Since(started))
 	return pool
 }
 

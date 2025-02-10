@@ -5,25 +5,21 @@ import (
 	"code.cloudfoundry.org/gorouter/config"
 	"code.cloudfoundry.org/gorouter/metrics"
 	"code.cloudfoundry.org/gorouter/route"
-	"github.com/prometheus/client_golang/prometheus"
 	"log"
 	"net/http"
-	"reflect"
-	"sync/atomic"
 	"time"
-	"unsafe"
 )
 
 // Metrics represents a prometheus metrics endpoint.
 type Metrics struct {
-	RouteRegistration           *prometheus.CounterVec
-	RouteUnregistration         *prometheus.CounterVec
-	RoutesPruned                prometheus.Counter
-	TotalRoutes                 prometheus.Gauge
-	TimeSinceLastRegistryUpdate prometheus.Gauge
-	RouteLookupTime             prometheus.Gauge
-	RouteRegistrationLatency    prometheus.Gauge
-	BadRequest                  prometheus.Counter
+	RouteRegistration           mr.CounterVec
+	RouteUnregistration         mr.CounterVec
+	RoutesPruned                mr.Counter
+	TotalRoutes                 mr.Gauge
+	TimeSinceLastRegistryUpdate mr.Gauge
+	RouteLookupTime             mr.Histogram
+	RouteRegistrationLatency    mr.Histogram
+	BadRequest                  mr.Counter
 	// lookup metrics
 	// error handler metrics
 	// proxy round tripper metrics
@@ -46,208 +42,100 @@ func NewMetricsRegistry(config config.PrometheusConfig) *mr.Registry {
 	return metricsRegistry
 }
 
-func NewRouteRegistryMetrics(registry *mr.Registry, perRequestMetricsReporting bool) *Metrics {
-	// The interface provided by the library massively restricts the usability of the prometheus
-	// library. If we are to implement this we either need to contribute a lot to the library or
-	// consume prometheus directly. Either way: what comes next is a no-go and has to be removed.
+var _ interface {
+	metrics.ProxyReporter
+	metrics.RouteRegistryReporter
+} = &Metrics{}
 
-	promRegV := reflect.ValueOf(registry).Elem().FieldByName("registerer")
-	promReg := reflect.NewAt(promRegV.Type(), unsafe.Pointer(promRegV.UnsafeAddr())).Interface().(*prometheus.Registerer)
-
-	m := &Metrics{
-		perRequestMetricsReporting: perRequestMetricsReporting,
-		unmuzzled:                  uint64(1),
-		RouteRegistration: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "registry_message",
-			Help: "number of route registration messages",
-		}, []string{"component_name"}),
-		RouteUnregistration: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "unregistry_message",
-			Help: "number of route unregister messages",
-		}, []string{"update_type", "component_name"}),
-		RoutesPruned: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "routes_pruned",
-			Help: "number of pruned routes",
-		}),
-		TotalRoutes: prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: "total_routes",
-			Help: "number of total routes",
-		}),
-		TimeSinceLastRegistryUpdate: prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: "ms_since_last_registry_update",
-			Help: "Time since last registry update in ms",
-		}),
-		RouteLookupTime: prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: "route_lookup_time",
-			Help: "Route lookup time per request in ns",
-		}),
-		RouteRegistrationLatency: prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: "route_registration_latency",
-			Help: "Route registration latency in ms",
-		}),
-		BadRequest: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "rejected_requests",
-			Help: "Number of rejected requests",
-		}),
+func NewMetrics(registry *mr.Registry, perRequestMetricsReporting bool) *Metrics {
+	return &Metrics{
+		RouteRegistration:           registry.NewCounterVec("registry_message", "number of route registration messages", []string{"component", "action"}),
+		RouteUnregistration:         registry.NewCounterVec("unregistry_message", "number of unregister messages", []string{"component"}),
+		RoutesPruned:                registry.NewCounter("routes_pruned", "number of pruned routes"),
+		TotalRoutes:                 registry.NewGauge("total_routes", "number of total routes"),
+		TimeSinceLastRegistryUpdate: registry.NewGauge("ms_since_last_registry_update", "time since last registry update in ms"),
+		RouteLookupTime:             registry.NewHistogram("route_lookup_time", "route lookup time per request in ns", []float64{10_000, 20_000, 30_000, 40_000, 50_000, 60_000, 70_000, 80_000, 90_000, 100_000}),
+		RouteRegistrationLatency:    registry.NewHistogram("route_registration_latency", "route registration latency in ns", []float64{0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2}), // TODO: validate
+		BadRequest:                  registry.NewCounter("rejected_requests", "number of rejected requests"),
+		perRequestMetricsReporting:  perRequestMetricsReporting,
 	}
-
-	(*promReg).MustRegister(m.RouteRegistration)
-	(*promReg).MustRegister(m.RouteUnregistration)
-	(*promReg).MustRegister(m.RoutesPruned)
-	(*promReg).MustRegister(m.TotalRoutes)
-	(*promReg).MustRegister(m.TimeSinceLastRegistryUpdate)
-	(*promReg).MustRegister(m.RouteLookupTime)
-	(*promReg).MustRegister(m.RouteRegistrationLatency)
-	(*promReg).MustRegister(m.BadRequest)
-
-	return m
 }
 
 func (metrics *Metrics) CaptureRouteStats(totalRoutes int, msSinceLastUpdate int64) {
-	if !metrics.isPrometheusEnabled() {
-		return
-	}
 	metrics.TotalRoutes.Set(float64(totalRoutes))
 	metrics.TimeSinceLastRegistryUpdate.Set(float64(msSinceLastUpdate))
 }
 
-func (metrics *Metrics) CaptureRegistryMessage(msg metrics.ComponentTagged) {
-	if !metrics.isPrometheusEnabled() {
-		return
-	}
-
-	metrics.RouteRegistration.WithLabelValues(msg.Component()).Inc()
+func (metrics *Metrics) CaptureRegistryMessage(msg metrics.ComponentTagged, action string) {
+	metrics.RouteRegistration.Add(1, []string{msg.Component(), action})
 }
 
 func (metrics *Metrics) CaptureUnregistryMessage(msg metrics.ComponentTagged) {
-	if !metrics.isPrometheusEnabled() {
-		return
-	}
-	metrics.RouteUnregistration.WithLabelValues(msg.Component()).Inc()
+	metrics.RouteUnregistration.Add(1, []string{msg.Component()})
 }
 
 func (metrics *Metrics) CaptureRoutesPruned(routesPruned uint64) {
-	if !metrics.isPrometheusEnabled() {
-		return
-	}
 	metrics.RoutesPruned.Add(float64(routesPruned))
 }
 
 func (metrics *Metrics) CaptureTotalRoutes(totalRoutes int) {
-	if !metrics.isPrometheusEnabled() {
-		return
-	}
 	metrics.TotalRoutes.Set(float64(totalRoutes))
 }
 
 func (metrics *Metrics) CaptureTimeSinceLastRegistryUpdate(msSinceLastUpdate int64) {
-	if !metrics.isPrometheusEnabled() {
-		return
-	}
 	metrics.TimeSinceLastRegistryUpdate.Set(float64(msSinceLastUpdate))
 }
 
 func (metrics *Metrics) CaptureLookupTime(t time.Duration) {
-	if !metrics.isPrometheusEnabled() || !metrics.perRequestMetricsReporting {
-		return
-	}
 
-	metrics.RouteLookupTime.Set(float64(t.Nanoseconds()))
+	// TODO: a histogram would be better.
+	metrics.RouteLookupTime.Observe(float64(t.Nanoseconds()))
 }
 
 func (metrics *Metrics) CaptureRouteRegistrationLatency(t time.Duration) {
-	if !metrics.isPrometheusEnabled() {
-		return
-	}
-	if atomic.LoadUint64(&metrics.unmuzzled) == 1 {
-		latency := t / time.Millisecond
-		metrics.RouteRegistrationLatency.Set(float64(latency))
-	}
+	metrics.RouteRegistrationLatency.Observe(float64(t) / float64(time.Millisecond))
 }
 
-func (metrics *Metrics) UnmuzzleRouteRegistrationLatency() {
-	if !metrics.isPrometheusEnabled() {
-		return
-	}
-	atomic.StoreUint64(&metrics.unmuzzled, 1)
-}
+// TODO: explain
+func (metrics *Metrics) UnmuzzleRouteRegistrationLatency() {} // needed to fulfil interface
 
 func (metrics *Metrics) CaptureBackendExhaustedConns() {
-	if !metrics.isPrometheusEnabled() {
-		return
-	}
 }
+
 func (metrics *Metrics) CaptureBackendInvalidID() {
-	if !metrics.isPrometheusEnabled() {
-		return
-	}
 }
 
 func (metrics *Metrics) CaptureBackendInvalidTLSCert() {
-	if !metrics.isPrometheusEnabled() {
-		return
-	}
 }
 
 func (metrics *Metrics) CaptureBackendTLSHandshakeFailed() {
-	if !metrics.isPrometheusEnabled() {
-		return
-	}
 }
 
 func (metrics *Metrics) CaptureBadRequest() {
-	if !metrics.isPrometheusEnabled() {
-		return
-	}
 
-	metrics.BadRequest.Inc()
+	metrics.BadRequest.Add(1)
 }
 
 func (metrics *Metrics) CaptureBadGateway() {
-	if !metrics.isPrometheusEnabled() {
-		return
-	}
 }
 
 func (metrics *Metrics) CaptureEmptyContentLengthHeader() {
-	if !metrics.isPrometheusEnabled() {
-		return
-	}
 }
 
 // TODO: check if function is used at all
 func (metrics *Metrics) CaptureRoutingRequest(b *route.Endpoint) {
-	if !metrics.isPrometheusEnabled() {
-		return
-	}
 }
 func (metrics *Metrics) CaptureRoutingResponse(statusCode int) {
-	if !metrics.isPrometheusEnabled() {
-		return
-	}
 }
 
 func (metrics *Metrics) CaptureRoutingResponseLatency(b *route.Endpoint, statusCode int, t time.Time, d time.Duration) {
-	if !metrics.isPrometheusEnabled() {
-		return
-	}
-}
-func (metrics *Metrics) CaptureRouteServiceResponse(res *http.Response) {
-	if !metrics.isPrometheusEnabled() {
-		return
-	}
-}
-func (metrics *Metrics) CaptureWebSocketUpdate() {
-	if !metrics.isPrometheusEnabled() {
-		return
-	}
-}
-func (metrics *Metrics) CaptureWebSocketFailure() {
-	if !metrics.isPrometheusEnabled() {
-		return
-	}
 }
 
-func (metrics *Metrics) isPrometheusEnabled() bool {
-	return true
+func (metrics *Metrics) CaptureRouteServiceResponse(res *http.Response) {
+}
+
+func (metrics *Metrics) CaptureWebSocketUpdate() {
+}
+
+func (metrics *Metrics) CaptureWebSocketFailure() {
 }

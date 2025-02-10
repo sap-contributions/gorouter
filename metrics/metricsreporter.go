@@ -15,6 +15,11 @@ import (
 	"github.com/cloudfoundry/dropsonde/metrics"
 )
 
+var _ interface {
+	ProxyReporter
+	RouteRegistryReporter
+} = &MetricsReporter{}
+
 type MetricsReporter struct {
 	Sender                     metrics.MetricSender
 	Batcher                    metrics.MetricBatcher
@@ -135,7 +140,7 @@ func (m *MetricsReporter) CaptureRoutesPruned(routesPruned uint64) {
 	m.Batcher.BatchAddCounter("routes_pruned", routesPruned)
 }
 
-func (m *MetricsReporter) CaptureRegistryMessage(msg ComponentTagged) {
+func (m *MetricsReporter) CaptureRegistryMessage(msg ComponentTagged, _ string) {
 	var componentName string
 	if msg.Component() == "" {
 		componentName = "registry_message"

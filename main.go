@@ -134,20 +134,40 @@ func main() {
 
 	metricsReporter := initializeMetrics(sender, c, grlog.CreateLoggerWithSource(prefix, "metricsreporter"))
 
+	promRegistry := metrics_prometheus.NewMetricsRegistry(c.Prometheus)
+	var promMetrics *metrics_prometheus.Metrics
+	if c.Prometheus.Enabled {
+		promMetrics = metrics_prometheus.NewMetrics(promRegistry, c.PerRequestMetricsReporting)
+	}
+
 	// setup metrics via prometheus
-	metricsRegistry := metrics_prometheus.NewMetricsRegistry(c.Prometheus)
-	prometheusMetrics := metrics_prometheus.NewRouteRegistryMetrics(metricsRegistry, c.PerRequestMetricsReporting)
-	multiRouteRegistryMetricsReporter := metrics.MultiRouteRegistryReporter{prometheusMetrics, metricsReporter}
-	fdMonitor := initializeFDMonitor(sender, grlog.CreateLoggerWithSource(prefix, "FileDescriptor"))
-	registry := rregistry.NewRouteRegistry(grlog.CreateLoggerWithSource(prefix, "registry"), c, multiRouteRegistryMetricsReporter)
+	var registryMetrics metrics.MultiRouteRegistryReporter
+	// TODO: introduce feature flag to turn this off as well
+	registryMetrics = append(registryMetrics, metricsReporter)
+	if promMetrics != nil {
+		registryMetrics = append(registryMetrics, promMetrics)
+	}
+
+	registry := rregistry.NewRouteRegistry(grlog.CreateLoggerWithSource(prefix, "registry"), c, registryMetrics)
+
+	varz := rvarz.NewVarz(registry)
+
+	var proxyMetrics metrics.MultiProxyReporter
+
+	// TODO: introduce feature flag
+	proxyMetrics = append(proxyMetrics, metricsReporter)
+
+	if promMetrics != nil {
+		proxyMetrics = append(proxyMetrics, promMetrics)
+	}
+
+	compositeReporter := &metrics.CompositeReporter{VarzReporter: varz, ProxyReporter: proxyMetrics}
 
 	if c.SuspendPruningIfNatsUnavailable {
 		registry.SuspendPruning(func() bool { return !(natsClient.Status() == nats.CONNECTED) })
 	}
 
-	multiProxyMetricsReporter := metrics.MultiProxyReporter{prometheusMetrics, metricsReporter}
-	varz := rvarz.NewVarz(registry)
-	compositeReporter := &metrics.CompositeReporter{VarzReporter: varz, ProxyReporter: multiProxyMetricsReporter}
+	fdMonitor := initializeFDMonitor(sender, grlog.CreateLoggerWithSource(prefix, "FileDescriptor"))
 
 	accessLogger, err := accesslog.CreateRunningAccessLogger(
 		grlog.CreateLoggerWithSource(prefix, "access-grlog"),
@@ -205,7 +225,7 @@ func main() {
 	proxyHandler := proxy.NewProxy(
 		logger,
 		accessLogger,
-		metricsRegistry,
+		promRegistry,
 		ew,
 		c,
 		registry,
@@ -258,8 +278,8 @@ func main() {
 	monitor := ifrit.Invoke(sigmon.New(group, syscall.SIGTERM, syscall.SIGINT, syscall.SIGUSR1))
 
 	go func() {
-		time.Sleep(c.RouteLatencyMetricMuzzleDuration) // this way we avoid reporting metrics for pre-existing routes
-		multiRouteRegistryMetricsReporter.UnmuzzleRouteRegistrationLatency()
+		time.Sleep(c.RouteLatencyMetricMuzzleDuration)     // this way we avoid reporting metrics for pre-existing routes
+		registryMetrics.UnmuzzleRouteRegistrationLatency() // TODO: look at this
 	}()
 
 	<-monitor.Ready()

@@ -24,7 +24,7 @@ var _ = Describe("Metrics", func() {
 			var perRequestMetricsReporting = true
 			var config = config.PrometheusConfig{Port: 0}
 			r = NewMetricsRegistry(config)
-			m = NewRouteRegistryMetrics(r, perRequestMetricsReporting)
+			m = NewMetrics(r, perRequestMetricsReporting)
 			endpoint = new(route.Endpoint)
 		})
 
@@ -32,17 +32,17 @@ var _ = Describe("Metrics", func() {
 			endpoint.Tags = map[string]string{}
 			m.CaptureRegistryMessage(endpoint)
 
-			Expect(getMetrics(r.Port())).To(ContainSubstring("registry_message{component_name=\"\"} 1"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("registry_message{component=\"\"} 1"))
 		})
 
 		It("sends number of nats messages received from each component", func() {
 			endpoint.Tags = map[string]string{"component": "uaa"}
 			m.CaptureRegistryMessage(endpoint)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("registry_message{component_name=\"uaa\"} 1"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("registry_message{component=\"uaa\"} 1"))
 
 			endpoint.Tags = map[string]string{"component": "route-emitter"}
 			m.CaptureRegistryMessage(endpoint)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("registry_message{component_name=\"route-emitter\"} 1"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("registry_message{component=\"route-emitter\"} 1"))
 		})
 
 		It("sends the total routes", func() {
@@ -68,15 +68,12 @@ var _ = Describe("Metrics", func() {
 		})
 
 		Describe("CaptureRouteRegistrationLatency", func() {
-			It("is muzzled by default", func() {
-				m.CaptureRouteRegistrationLatency(2 * time.Second)
+			It("properly splits the latencies apart", func() {
+				m.CaptureRouteRegistrationLatency(1234 * time.Microsecond)
+				m.CaptureRouteRegistrationLatency(134 * time.Microsecond)
 
-				Expect(getMetrics(r.Port())).To(ContainSubstring("route_registration_latency 2000"))
-			})
-			It("sends router registration latency when unmuzzled", func() {
-				m.UnmuzzleRouteRegistrationLatency()
-				m.CaptureRouteRegistrationLatency(2 * time.Second)
-				Expect(getMetrics(r.Port())).To(ContainSubstring("route_registration_latency 2000"))
+				Expect(getMetrics(r.Port())).To(ContainSubstring("route_registration_latency_bucket{le=\"1.4\"} 2"))
+				Expect(getMetrics(r.Port())).To(ContainSubstring("route_registration_latency_bucket{le=\"0.2\"} 1"))
 			})
 		})
 	})
