@@ -136,17 +136,18 @@ func main() {
 
 	// setup metrics via prometheus
 	metricsRegistry := metrics_prometheus.NewMetricsRegistry(c.Prometheus)
-	routeRegistryMetrics := metrics_prometheus.NewRouteRegistryMetrics(metricsRegistry, c.PerRequestMetricsReporting)
-	metricsReporters := []metrics.RouteRegistryReporter{metricsReporter, routeRegistryMetrics}
+	prometheusMetrics := metrics_prometheus.NewRouteRegistryMetrics(metricsRegistry, c.PerRequestMetricsReporting)
+	multiRouteRegistryMetricsReporter := metrics.MultiRouteRegistryReporter{prometheusMetrics, metricsReporter}
 	fdMonitor := initializeFDMonitor(sender, grlog.CreateLoggerWithSource(prefix, "FileDescriptor"))
-	registry := rregistry.NewRouteRegistry(grlog.CreateLoggerWithSource(prefix, "registry"), c, metricsReporters)
+	registry := rregistry.NewRouteRegistry(grlog.CreateLoggerWithSource(prefix, "registry"), c, multiRouteRegistryMetricsReporter)
 
 	if c.SuspendPruningIfNatsUnavailable {
 		registry.SuspendPruning(func() bool { return !(natsClient.Status() == nats.CONNECTED) })
 	}
 
+	multiProxyMetricsReporter := metrics.MultiProxyReporter{prometheusMetrics, metricsReporter}
 	varz := rvarz.NewVarz(registry)
-	compositeReporter := &metrics.CompositeReporter{VarzReporter: varz, ProxyReporter: metricsReporter}
+	compositeReporter := &metrics.CompositeReporter{VarzReporter: varz, ProxyReporter: multiProxyMetricsReporter}
 
 	accessLogger, err := accesslog.CreateRunningAccessLogger(
 		grlog.CreateLoggerWithSource(prefix, "access-grlog"),
@@ -258,9 +259,7 @@ func main() {
 
 	go func() {
 		time.Sleep(c.RouteLatencyMetricMuzzleDuration) // this way we avoid reporting metrics for pre-existing routes
-		for _, reporter := range metricsReporters {
-			reporter.UnmuzzleRouteRegistrationLatency()
-		}
+		multiRouteRegistryMetricsReporter.UnmuzzleRouteRegistrationLatency()
 	}()
 
 	<-monitor.Ready()

@@ -4,6 +4,7 @@ import (
 	mr "code.cloudfoundry.org/go-metric-registry"
 	"code.cloudfoundry.org/gorouter/config"
 	"code.cloudfoundry.org/gorouter/metrics"
+	"code.cloudfoundry.org/gorouter/route"
 	"github.com/prometheus/client_golang/prometheus"
 	"log"
 	"net/http"
@@ -13,13 +14,8 @@ import (
 	"unsafe"
 )
 
-var _ metrics.RouteRegistryReporter = &Metrics{}
-
 // Metrics represents a prometheus metrics endpoint.
 type Metrics struct {
-	Config                      config.PrometheusConfig
-	Mux                         *http.ServeMux
-	server                      *http.Server
 	RouteRegistration           *prometheus.CounterVec
 	RouteUnregistration         *prometheus.CounterVec
 	RoutesPruned                prometheus.Counter
@@ -89,6 +85,10 @@ func NewRouteRegistryMetrics(registry *mr.Registry, perRequestMetricsReporting b
 			Name: "route_registration_latency",
 			Help: "Route registration latency in ms",
 		}),
+		BadRequest: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "rejected_requests",
+			Help: "Number of rejected requests",
+		}),
 	}
 
 	(*promReg).MustRegister(m.RouteRegistration)
@@ -98,6 +98,7 @@ func NewRouteRegistryMetrics(registry *mr.Registry, perRequestMetricsReporting b
 	(*promReg).MustRegister(m.TimeSinceLastRegistryUpdate)
 	(*promReg).MustRegister(m.RouteLookupTime)
 	(*promReg).MustRegister(m.RouteRegistrationLatency)
+	(*promReg).MustRegister(m.BadRequest)
 
 	return m
 }
@@ -171,12 +172,80 @@ func (metrics *Metrics) UnmuzzleRouteRegistrationLatency() {
 	atomic.StoreUint64(&metrics.unmuzzled, 1)
 }
 
+func (metrics *Metrics) CaptureBackendExhaustedConns() {
+	if !metrics.isPrometheusEnabled() {
+		return
+	}
+}
+func (metrics *Metrics) CaptureBackendInvalidID() {
+	if !metrics.isPrometheusEnabled() {
+		return
+	}
+}
+
+func (metrics *Metrics) CaptureBackendInvalidTLSCert() {
+	if !metrics.isPrometheusEnabled() {
+		return
+	}
+}
+
+func (metrics *Metrics) CaptureBackendTLSHandshakeFailed() {
+	if !metrics.isPrometheusEnabled() {
+		return
+	}
+}
+
 func (metrics *Metrics) CaptureBadRequest() {
 	if !metrics.isPrometheusEnabled() {
 		return
 	}
 
 	metrics.BadRequest.Inc()
+}
+
+func (metrics *Metrics) CaptureBadGateway() {
+	if !metrics.isPrometheusEnabled() {
+		return
+	}
+}
+
+func (metrics *Metrics) CaptureEmptyContentLengthHeader() {
+	if !metrics.isPrometheusEnabled() {
+		return
+	}
+}
+
+// TODO: check if function is used at all
+func (metrics *Metrics) CaptureRoutingRequest(b *route.Endpoint) {
+	if !metrics.isPrometheusEnabled() {
+		return
+	}
+}
+func (metrics *Metrics) CaptureRoutingResponse(statusCode int) {
+	if !metrics.isPrometheusEnabled() {
+		return
+	}
+}
+
+func (metrics *Metrics) CaptureRoutingResponseLatency(b *route.Endpoint, statusCode int, t time.Time, d time.Duration) {
+	if !metrics.isPrometheusEnabled() {
+		return
+	}
+}
+func (metrics *Metrics) CaptureRouteServiceResponse(res *http.Response) {
+	if !metrics.isPrometheusEnabled() {
+		return
+	}
+}
+func (metrics *Metrics) CaptureWebSocketUpdate() {
+	if !metrics.isPrometheusEnabled() {
+		return
+	}
+}
+func (metrics *Metrics) CaptureWebSocketFailure() {
+	if !metrics.isPrometheusEnabled() {
+		return
+	}
 }
 
 func (metrics *Metrics) isPrometheusEnabled() bool {
