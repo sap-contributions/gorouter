@@ -20,8 +20,12 @@ type Metrics struct {
 	RouteLookupTime             mr.Histogram
 	RouteRegistrationLatency    mr.Histogram
 	BadRequest                  mr.Counter
+	BadGateway                  mr.Counter // TODO from b1tamara: rename to BackendBadGateway?
+	BackendInvalidID            mr.Counter
+	BackendInvalidTLSCert       mr.Counter
+	BackendTLSHandshakeFailed   mr.Counter
+	BackendExhaustedConns       mr.Counter
 	// lookup metrics
-	// error handler metrics
 	// proxy round tripper metrics
 	// reporter metrics
 	perRequestMetricsReporting bool
@@ -57,6 +61,11 @@ func NewMetrics(registry *mr.Registry, perRequestMetricsReporting bool) *Metrics
 		RouteLookupTime:             registry.NewHistogram("route_lookup_time", "route lookup time per request in ns", []float64{10_000, 20_000, 30_000, 40_000, 50_000, 60_000, 70_000, 80_000, 90_000, 100_000}),
 		RouteRegistrationLatency:    registry.NewHistogram("route_registration_latency", "route registration latency in ns", []float64{0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2}), // TODO: validate
 		BadRequest:                  registry.NewCounter("rejected_requests", "number of rejected requests"),
+		BadGateway:                  registry.NewCounter("bad_gateways", "number of bad gateway errors received from backends"),
+		BackendInvalidID:            registry.NewCounter("backend_invalid_id", "number of bad backend id errors received from backends"),
+		BackendInvalidTLSCert:       registry.NewCounter("backend_invalid_tls_cert", "number of tls certificate errors received from backends"),
+		BackendTLSHandshakeFailed:   registry.NewCounter("backend_tls_handshake_failed", "number of backend handshake errors"),
+		BackendExhaustedConns:       registry.NewCounter("backend_exhausted_conns", "number of errors related to backend connection limit reached"),
 		perRequestMetricsReporting:  perRequestMetricsReporting,
 	}
 }
@@ -100,23 +109,28 @@ func (metrics *Metrics) CaptureRouteRegistrationLatency(t time.Duration) {
 func (metrics *Metrics) UnmuzzleRouteRegistrationLatency() {} // needed to fulfil interface
 
 func (metrics *Metrics) CaptureBackendExhaustedConns() {
+	metrics.BackendExhaustedConns.Add(1)
+}
+
+func (metrics *Metrics) CaptureBadGateway() {
+	metrics.BadGateway.Add(1)
 }
 
 func (metrics *Metrics) CaptureBackendInvalidID() {
+	metrics.BackendInvalidID.Add(1)
 }
 
 func (metrics *Metrics) CaptureBackendInvalidTLSCert() {
+	metrics.BackendInvalidTLSCert.Add(1)
 }
 
 func (metrics *Metrics) CaptureBackendTLSHandshakeFailed() {
+	metrics.BackendTLSHandshakeFailed.Add(1)
 }
 
 func (metrics *Metrics) CaptureBadRequest() {
 
 	metrics.BadRequest.Add(1)
-}
-
-func (metrics *Metrics) CaptureBadGateway() {
 }
 
 func (metrics *Metrics) CaptureEmptyContentLengthHeader() {
