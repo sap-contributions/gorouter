@@ -62,9 +62,9 @@ var _ = Describe("Metrics", func() {
 		})
 
 		It("sends the lookup time for routing table", func() {
-			m.CaptureLookupTime(time.Duration(955) * time.Millisecond)
+			m.CaptureLookupTime(time.Duration(95) * time.Microsecond)
 
-			Expect(getMetrics(r.Port())).To(ContainSubstring("route_lookup_time 9.55e+08"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("route_lookup_time_bucket{le=\"100000\"} 1"))
 		})
 
 		It("increments the routes_pruned metric", func() {
@@ -141,6 +141,16 @@ var _ = Describe("Metrics", func() {
 			m.CaptureBackendExhaustedConns()
 
 			Expect(getMetrics(r.Port())).To(ContainSubstring("backend_exhausted_conns 2"))
+		})
+	})
+	Context("websocket metrics", func() {
+		It("increments the websocket upgrades metric", func() {
+			m.CaptureWebSocketUpdate()
+			Expect(getMetrics(r.Port())).To(ContainSubstring("websocket_upgrades 1"))
+		})
+		It("increments the websocket failures metric", func() {
+			m.CaptureWebSocketFailure()
+			Expect(getMetrics(r.Port())).To(ContainSubstring("websocket_failures 1"))
 		})
 	})
 })

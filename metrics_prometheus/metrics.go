@@ -25,6 +25,8 @@ type Metrics struct {
 	BackendInvalidTLSCert       mr.Counter
 	BackendTLSHandshakeFailed   mr.Counter
 	BackendExhaustedConns       mr.Counter
+	WebsocketUpgrades           mr.Counter
+	WebsocketFailures           mr.Counter
 	// lookup metrics
 	// proxy round tripper metrics
 	// reporter metrics
@@ -66,6 +68,8 @@ func NewMetrics(registry *mr.Registry, perRequestMetricsReporting bool) *Metrics
 		BackendInvalidTLSCert:       registry.NewCounter("backend_invalid_tls_cert", "number of tls certificate errors received from backends"),
 		BackendTLSHandshakeFailed:   registry.NewCounter("backend_tls_handshake_failed", "number of backend handshake errors"),
 		BackendExhaustedConns:       registry.NewCounter("backend_exhausted_conns", "number of errors related to backend connection limit reached"),
+		WebsocketUpgrades:           registry.NewCounter("websocket_upgrades", "websocket upgrade to websocket"),
+		WebsocketFailures:           registry.NewCounter("websocket_failures", "websocket failure"),
 		perRequestMetricsReporting:  perRequestMetricsReporting,
 	}
 }
@@ -149,7 +153,9 @@ func (metrics *Metrics) CaptureRouteServiceResponse(res *http.Response) {
 }
 
 func (metrics *Metrics) CaptureWebSocketUpdate() {
+	metrics.WebsocketUpgrades.Add(1)
 }
 
 func (metrics *Metrics) CaptureWebSocketFailure() {
+	metrics.WebsocketFailures.Add(1)
 }
