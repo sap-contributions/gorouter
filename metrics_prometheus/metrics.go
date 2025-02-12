@@ -5,8 +5,10 @@ import (
 	"code.cloudfoundry.org/gorouter/config"
 	"code.cloudfoundry.org/gorouter/metrics"
 	"code.cloudfoundry.org/gorouter/route"
+	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -19,19 +21,20 @@ type Metrics struct {
 	TimeSinceLastRegistryUpdate mr.Gauge
 	RouteLookupTime             mr.Histogram
 	RouteRegistrationLatency    mr.Histogram
+	RoutingRequest              mr.CounterVec
 	BadRequest                  mr.Counter
 	BadGateway                  mr.Counter // TODO from b1tamara: rename to BackendBadGateway?
+	EmptyContentLengthHeader    mr.Counter
 	BackendInvalidID            mr.Counter
 	BackendInvalidTLSCert       mr.Counter
 	BackendTLSHandshakeFailed   mr.Counter
 	BackendExhaustedConns       mr.Counter
 	WebsocketUpgrades           mr.Counter
 	WebsocketFailures           mr.Counter
-	// lookup metrics
-	// proxy round tripper metrics
-	// reporter metrics
-	perRequestMetricsReporting bool
-	unmuzzled                  uint64
+	Responses                   mr.CounterVec
+	RouteServicesResponses      mr.CounterVec
+	Latency                     mr.Histogram // TODO introduce HistogramVec in go-metric-registry
+	perRequestMetricsReporting  bool
 }
 
 func NewMetricsRegistry(config config.PrometheusConfig) *mr.Registry {
@@ -62,14 +65,18 @@ func NewMetrics(registry *mr.Registry, perRequestMetricsReporting bool) *Metrics
 		TimeSinceLastRegistryUpdate: registry.NewGauge("ms_since_last_registry_update", "time since last registry update in ms"),
 		RouteLookupTime:             registry.NewHistogram("route_lookup_time", "route lookup time per request in ns", []float64{10_000, 20_000, 30_000, 40_000, 50_000, 60_000, 70_000, 80_000, 90_000, 100_000}),
 		RouteRegistrationLatency:    registry.NewHistogram("route_registration_latency", "route registration latency in ns", []float64{0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2}), // TODO: validate
+		RoutingRequest:              registry.NewCounterVec("total_requests", "number of routing requests", []string{"component", "is_routed_app"}),
 		BadRequest:                  registry.NewCounter("rejected_requests", "number of rejected requests"),
 		BadGateway:                  registry.NewCounter("bad_gateways", "number of bad gateway errors received from backends"),
+		EmptyContentLengthHeader:    registry.NewCounter("empty_content_length_header", "number of requests with the empty content length header"),
 		BackendInvalidID:            registry.NewCounter("backend_invalid_id", "number of bad backend id errors received from backends"),
 		BackendInvalidTLSCert:       registry.NewCounter("backend_invalid_tls_cert", "number of tls certificate errors received from backends"),
 		BackendTLSHandshakeFailed:   registry.NewCounter("backend_tls_handshake_failed", "number of backend handshake errors"),
 		BackendExhaustedConns:       registry.NewCounter("backend_exhausted_conns", "number of errors related to backend connection limit reached"),
 		WebsocketUpgrades:           registry.NewCounter("websocket_upgrades", "websocket upgrade to websocket"),
 		WebsocketFailures:           registry.NewCounter("websocket_failures", "websocket failure"),
+		Responses:                   registry.NewCounterVec("responses", "number of responses", []string{"status_group"}),
+		RouteServicesResponses:      registry.NewCounterVec("route_services_responses", "number of responses for route services", []string{"status_group"}),
 		perRequestMetricsReporting:  perRequestMetricsReporting,
 	}
 }
@@ -100,17 +107,20 @@ func (metrics *Metrics) CaptureTimeSinceLastRegistryUpdate(msSinceLastUpdate int
 }
 
 func (metrics *Metrics) CaptureLookupTime(t time.Duration) {
-
-	// TODO: a histogram would be better.
-	metrics.RouteLookupTime.Observe(float64(t.Nanoseconds()))
+	if metrics.perRequestMetricsReporting {
+		metrics.RouteLookupTime.Observe(float64(t.Nanoseconds()))
+	}
 }
 
 func (metrics *Metrics) CaptureRouteRegistrationLatency(t time.Duration) {
 	metrics.RouteRegistrationLatency.Observe(float64(t) / float64(time.Millisecond))
 }
 
-// TODO: explain
-func (metrics *Metrics) UnmuzzleRouteRegistrationLatency() {} // needed to fulfil interface
+// UnmuzzleRouteRegistrationLatency should set a flag which suppresses metric data.
+// That makes sense for Envelope V1 where we send it to collector any time we got new value
+// but is unnecessary for Prometheus where data is buffered and sent to collector on constant frequency base.
+// We still need this method though to fulfil the interface.
+func (metrics *Metrics) UnmuzzleRouteRegistrationLatency() {}
 
 func (metrics *Metrics) CaptureBackendExhaustedConns() {
 	metrics.BackendExhaustedConns.Add(1)
@@ -133,23 +143,39 @@ func (metrics *Metrics) CaptureBackendTLSHandshakeFailed() {
 }
 
 func (metrics *Metrics) CaptureBadRequest() {
-
 	metrics.BadRequest.Add(1)
 }
 
 func (metrics *Metrics) CaptureEmptyContentLengthHeader() {
+	metrics.EmptyContentLengthHeader.Add(1)
 }
 
-// TODO: check if function is used at all
+// CaptureRoutingRequest used to capture backend round trips
 func (metrics *Metrics) CaptureRoutingRequest(b *route.Endpoint) {
+	component := b.Component()
+	labels := []string{component, "no"} // component, is-routed-app
+	if strings.HasPrefix(component, "dea-") {
+		labels = []string{"dea-*", "yes"}
+	}
+	metrics.RoutingRequest.Add(1, labels)
 }
+
 func (metrics *Metrics) CaptureRoutingResponse(statusCode int) {
+	metrics.Responses.Add(1, []string{statusGroupName(statusCode)})
 }
 
 func (metrics *Metrics) CaptureRoutingResponseLatency(b *route.Endpoint, statusCode int, t time.Time, d time.Duration) {
+	if metrics.perRequestMetricsReporting {
+
+	}
 }
 
 func (metrics *Metrics) CaptureRouteServiceResponse(res *http.Response) {
+	var statusCode int
+	if res != nil {
+		statusCode = res.StatusCode
+	}
+	metrics.RouteServicesResponses.Add(1, []string{statusGroupName(statusCode)})
 }
 
 func (metrics *Metrics) CaptureWebSocketUpdate() {
@@ -158,4 +184,12 @@ func (metrics *Metrics) CaptureWebSocketUpdate() {
 
 func (metrics *Metrics) CaptureWebSocketFailure() {
 	metrics.WebsocketFailures.Add(1)
+}
+
+func statusGroupName(statusCode int) string {
+	statusGroupNum := statusCode / 100
+	if statusGroupNum >= 2 && statusGroupNum <= 5 {
+		return fmt.Sprintf("%dxx", statusGroupNum)
+	}
+	return "xxx"
 }
