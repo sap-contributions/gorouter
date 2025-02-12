@@ -1,6 +1,7 @@
 package main
 
 import (
+	mr "code.cloudfoundry.org/go-metric-registry"
 	"code.cloudfoundry.org/gorouter/metrics_prometheus"
 	"context"
 	"crypto/tls"
@@ -131,19 +132,24 @@ func main() {
 
 	// setup metrics via dropsonse
 	sender := metric_sender.NewMetricSender(dropsonde.AutowiredEmitter())
+	var metricsReporter *metrics.MetricsReporter
+	if c.EnableEnvelopeV1Metrics {
+		metricsReporter = initializeMetrics(sender, c, grlog.CreateLoggerWithSource(prefix, "metricsreporter"))
+	}
 
-	metricsReporter := initializeMetrics(sender, c, grlog.CreateLoggerWithSource(prefix, "metricsreporter"))
-
-	promRegistry := metrics_prometheus.NewMetricsRegistry(c.Prometheus)
+	var promRegistry *mr.Registry
 	var promMetrics *metrics_prometheus.Metrics
 	if c.Prometheus.Enabled {
+		promRegistry = metrics_prometheus.NewMetricsRegistry(c.Prometheus)
 		promMetrics = metrics_prometheus.NewMetrics(promRegistry, c.PerRequestMetricsReporting)
 	}
 
 	// setup metrics via prometheus
 	var registryMetrics metrics.MultiRouteRegistryReporter
-	// TODO: introduce feature flag to turn this off as well
-	registryMetrics = append(registryMetrics, metricsReporter)
+
+	if metricsReporter != nil {
+		registryMetrics = append(registryMetrics, metricsReporter)
+	}
 	if promMetrics != nil {
 		registryMetrics = append(registryMetrics, promMetrics)
 	}
@@ -154,8 +160,9 @@ func main() {
 
 	var proxyMetrics metrics.MultiProxyReporter
 
-	// TODO: introduce feature flag
-	proxyMetrics = append(proxyMetrics, metricsReporter)
+	if metricsReporter != nil {
+		proxyMetrics = append(proxyMetrics, metricsReporter)
+	}
 
 	if promMetrics != nil {
 		proxyMetrics = append(proxyMetrics, promMetrics)

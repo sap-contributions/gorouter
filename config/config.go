@@ -112,7 +112,7 @@ var defaultStatusConfig = StatusConfig{
 }
 
 type PrometheusConfig struct {
-	Enabled  bool   `yaml:"enabled"`
+	Enabled  bool   `yaml:"enabled,omitempty"`
 	Port     uint16 `yaml:"port"`
 	CertPath string `yaml:"cert_path"`
 	KeyPath  string `yaml:"key_path"`
@@ -482,6 +482,9 @@ type Config struct {
 	// reports latency under gorouter sourceid, and with and without component name
 	PerRequestMetricsReporting bool `yaml:"per_request_metrics_reporting,omitempty"`
 
+	// Switch to disable old metrics reporting using Envelope v1
+	EnableEnvelopeV1Metrics bool `yaml:"enable_envelope_v1_metrics"`
+
 	// Old metric, to eventually be replaced by prometheus reporting
 	SendHttpStartStopServerEvent bool `yaml:"send_http_start_stop_server_event,omitempty"`
 
@@ -552,6 +555,8 @@ var defaultConfig = Config{
 	StickySessionsForAuthNegotiate: false,
 
 	PerRequestMetricsReporting: true,
+
+	EnableEnvelopeV1Metrics: true,
 
 	SendHttpStartStopServerEvent: true,
 

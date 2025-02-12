@@ -225,6 +225,7 @@ max_request_header_bytes: 10
 		It("sets prometheus endpoint config", func() {
 			var b = []byte(`
 prometheus:
+  enabled: true
   port: 1234
   cert_path: /some-cert-path
   key_path: /some-key-path
@@ -234,6 +235,7 @@ prometheus:
 			err := config.Initialize(b)
 			Expect(err).ToNot(HaveOccurred())
 
+			Expect(config.Prometheus.Enabled).To(BeTrue())
 			Expect(config.Prometheus.Port).To(Equal(uint16(1234)))
 			Expect(config.Prometheus.CertPath).To(Equal("/some-cert-path"))
 			Expect(config.Prometheus.KeyPath).To(Equal("/some-key-path"))
@@ -922,6 +924,17 @@ backends:
 			err := config.Initialize(b)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(config.PerRequestMetricsReporting).To(BeFalse())
+		})
+
+		It("defaults EnableEnvelopeV1Metrics to true", func() {
+			Expect(config.EnableEnvelopeV1Metrics).To(Equal(true))
+		})
+
+		It("sets EnableEnvelopeV1Metrics", func() {
+			var b = []byte(`enable_envelope_v1_metrics: false`)
+			err := config.Initialize(b)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(config.EnableEnvelopeV1Metrics).To(BeFalse())
 		})
 
 		It("defaults SendHttpStartStopServerEvent to true", func() {
