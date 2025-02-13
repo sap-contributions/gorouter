@@ -33,7 +33,7 @@ type Metrics struct {
 	WebsocketFailures           mr.Counter
 	Responses                   mr.CounterVec
 	RouteServicesResponses      mr.CounterVec
-	Latency                     mr.Histogram // TODO introduce HistogramVec in go-metric-registry
+	RoutingResponseLatency      mr.HistogramVec
 	perRequestMetricsReporting  bool
 }
 
@@ -64,7 +64,7 @@ func NewMetrics(registry *mr.Registry, perRequestMetricsReporting bool) *Metrics
 		TotalRoutes:                 registry.NewGauge("total_routes", "number of total routes"),
 		TimeSinceLastRegistryUpdate: registry.NewGauge("ms_since_last_registry_update", "time since last registry update in ms"),
 		RouteLookupTime:             registry.NewHistogram("route_lookup_time", "route lookup time per request in ns", []float64{10_000, 20_000, 30_000, 40_000, 50_000, 60_000, 70_000, 80_000, 90_000, 100_000}),
-		RouteRegistrationLatency:    registry.NewHistogram("route_registration_latency", "route registration latency in ns", []float64{0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2}), // TODO: validate
+		RouteRegistrationLatency:    registry.NewHistogram("route_registration_latency", "route registration latency in ms", []float64{0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2}), // TODO: validate
 		RoutingRequest:              registry.NewCounterVec("total_requests", "number of routing requests", []string{"component", "is_routed_app"}),
 		BadRequest:                  registry.NewCounter("rejected_requests", "number of rejected requests"),
 		BadGateway:                  registry.NewCounter("bad_gateways", "number of bad gateway errors received from backends"),
@@ -76,7 +76,8 @@ func NewMetrics(registry *mr.Registry, perRequestMetricsReporting bool) *Metrics
 		WebsocketUpgrades:           registry.NewCounter("websocket_upgrades", "websocket upgrade to websocket"),
 		WebsocketFailures:           registry.NewCounter("websocket_failures", "websocket failure"),
 		Responses:                   registry.NewCounterVec("responses", "number of responses", []string{"status_group"}),
-		RouteServicesResponses:      registry.NewCounterVec("route_services_responses", "number of responses for route services", []string{"status_group"}),
+		RouteServicesResponses:      registry.NewCounterVec("responses_route_services", "number of responses for route services", []string{"status_group"}),
+		RoutingResponseLatency:      registry.NewHistogramVec("latency", "routing response latency in ms", []string{"component"}, []float64{0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2}),
 		perRequestMetricsReporting:  perRequestMetricsReporting,
 	}
 }
@@ -164,9 +165,10 @@ func (metrics *Metrics) CaptureRoutingResponse(statusCode int) {
 	metrics.Responses.Add(1, []string{statusGroupName(statusCode)})
 }
 
-func (metrics *Metrics) CaptureRoutingResponseLatency(b *route.Endpoint, statusCode int, t time.Time, d time.Duration) {
+// CaptureRoutingResponseLatency has extra arguments to match varz reporter
+func (metrics *Metrics) CaptureRoutingResponseLatency(b *route.Endpoint, _ int, _ time.Time, d time.Duration) {
 	if metrics.perRequestMetricsReporting {
-
+		metrics.RoutingResponseLatency.Observe(float64(d)/float64(time.Millisecond), []string{b.Component()})
 	}
 }
 

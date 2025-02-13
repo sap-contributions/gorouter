@@ -27,6 +27,9 @@ var _ = Describe("Metrics", func() {
 			m = NewMetrics(r, perRequestMetricsReporting)
 			endpoint = new(route.Endpoint)
 		})
+		AfterEach(func() {
+			m.perRequestMetricsReporting = true
+		})
 
 		It("sends number of nats messages received from each component", func() {
 			endpoint.Tags = map[string]string{}
@@ -92,6 +95,9 @@ var _ = Describe("Metrics", func() {
 			r = NewMetricsRegistry(config)
 			m = NewMetrics(r, perRequestMetricsReporting)
 		})
+		AfterEach(func() {
+			m.perRequestMetricsReporting = true
+		})
 
 		It("increments the bad gateway to backend metric", func() {
 			m.CaptureBadGateway()
@@ -132,6 +138,9 @@ var _ = Describe("Metrics", func() {
 			r = NewMetricsRegistry(config)
 			m = NewMetrics(r, perRequestMetricsReporting)
 		})
+		AfterEach(func() {
+			m.perRequestMetricsReporting = true
+		})
 
 		It("increments the bad requests metric", func() {
 			m.CaptureBadRequest()
@@ -169,12 +178,18 @@ var _ = Describe("Metrics", func() {
 		var endpoint *route.Endpoint
 
 		BeforeEach(func() {
+			var perRequestMetricsReporting = true
+			var config = config.PrometheusConfig{Port: 0}
+			r = NewMetricsRegistry(config)
+			m = NewMetrics(r, perRequestMetricsReporting)
 			endpoint = new(route.Endpoint)
+		})
+		AfterEach(func() {
+			m.perRequestMetricsReporting = true
 		})
 
 		It("increments the total requests metric", func() {
 			endpoint.Tags = map[string]string{}
-
 			m.CaptureRoutingRequest(endpoint)
 			Expect(getMetrics(r.Port())).To(ContainSubstring("total_requests{component=\"\",is_routed_app=\"no\"} 1"))
 
@@ -269,65 +284,110 @@ var _ = Describe("Metrics", func() {
 		var response http.Response
 
 		BeforeEach(func() {
+			var perRequestMetricsReporting = true
+			var config = config.PrometheusConfig{Port: 0}
+			r = NewMetricsRegistry(config)
+			m = NewMetrics(r, perRequestMetricsReporting)
 			response = http.Response{}
+		})
+		AfterEach(func() {
+			m.perRequestMetricsReporting = true
 		})
 
 		It("increments the 2XX route services response metrics", func() {
 			response.StatusCode = 200
+			m.CaptureRouteServiceResponse(&response)
+			Expect(getMetrics(r.Port())).To(ContainSubstring("responses_route_services{status_group=\"2xx\"} 1"))
 
 			m.CaptureRouteServiceResponse(&response)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("route_services_responses{status_group=\"2xx\"} 1"))
-
-			m.CaptureRouteServiceResponse(&response)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("route_services_responses{status_group=\"2xx\"} 2"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("responses_route_services{status_group=\"2xx\"} 2"))
 		})
 
 		It("increments the 3XX response metrics", func() {
 			response.StatusCode = 300
 			m.CaptureRouteServiceResponse(&response)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("route_services_responses{status_group=\"3xx\"} 1"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("responses_route_services{status_group=\"3xx\"} 1"))
 
 			response.StatusCode = 304
 			m.CaptureRouteServiceResponse(&response)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("route_services_responses{status_group=\"3xx\"} 2"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("responses_route_services{status_group=\"3xx\"} 2"))
 		})
 
 		It("increments the 4XX response metrics", func() {
 			response.StatusCode = 401
+			m.CaptureRouteServiceResponse(&response)
+			Expect(getMetrics(r.Port())).To(ContainSubstring("responses_route_services{status_group=\"4xx\"} 1"))
 
 			m.CaptureRouteServiceResponse(&response)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("route_services_responses{status_group=\"4xx\"} 1"))
-
-			m.CaptureRouteServiceResponse(&response)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("route_services_responses{status_group=\"4xx\"} 2"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("responses_route_services{status_group=\"4xx\"} 2"))
 		})
 
 		It("increments the 5XX response metrics", func() {
 			response.StatusCode = 500
 			m.CaptureRouteServiceResponse(&response)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("route_services_responses{status_group=\"5xx\"} 1"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("responses_route_services{status_group=\"5xx\"} 1"))
 
 			response.StatusCode = 504
 			m.CaptureRouteServiceResponse(&response)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("route_services_responses{status_group=\"5xx\"} 2"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("responses_route_services{status_group=\"5xx\"} 2"))
 		})
 
 		It("increments the XXX response metrics", func() {
 			response.StatusCode = 100
+			m.CaptureRouteServiceResponse(&response)
+			Expect(getMetrics(r.Port())).To(ContainSubstring("responses_route_services{status_group=\"xxx\"} 1"))
 
 			m.CaptureRouteServiceResponse(&response)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("route_services_responses{status_group=\"xxx\"} 1"))
-
-			m.CaptureRouteServiceResponse(&response)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("route_services_responses{status_group=\"xxx\"} 2"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("responses_route_services{status_group=\"xxx\"} 2"))
 		})
 
 		It("increments the XXX response metrics with null response", func() {
 			m.CaptureRouteServiceResponse(nil)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("route_services_responses{status_group=\"xxx\"} 3"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("responses_route_services{status_group=\"xxx\"} 1"))
 
 			m.CaptureRouteServiceResponse(nil)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("route_services_responses{status_group=\"xxx\"} 4"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("responses_route_services{status_group=\"xxx\"} 2"))
+		})
+	})
+
+	Context("increments the route response metrics", func() {
+		var endpoint *route.Endpoint
+
+		BeforeEach(func() {
+			var perRequestMetricsReporting = true
+			var config = config.PrometheusConfig{Port: 0}
+			r = NewMetricsRegistry(config)
+			m = NewMetrics(r, perRequestMetricsReporting)
+			endpoint = new(route.Endpoint)
+		})
+		AfterEach(func() {
+			m.perRequestMetricsReporting = true
+		})
+
+		It("sends the latency", func() {
+			m.CaptureRoutingResponseLatency(endpoint, 0, time.Time{}, 2*time.Millisecond)
+			m.CaptureRoutingResponseLatency(endpoint, 0, time.Time{}, 500*time.Microsecond)
+			Expect(getMetrics(r.Port())).To(ContainSubstring("latency_bucket{component=\"\",le=\"0.6\"} 1"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("latency_bucket{component=\"\",le=\"2\"} 2"))
+		})
+
+		It("does not send the latency if switched off", func() {
+			m.perRequestMetricsReporting = false
+			m.CaptureRoutingResponseLatency(endpoint, 0, time.Time{}, 2*time.Millisecond)
+			Expect(getMetrics(r.Port())).NotTo(ContainSubstring("\nlatency_bucket"))
+		})
+
+		It("sends the latency for the given component", func() {
+			endpoint.Tags = map[string]string{"component": "CloudController"}
+			m.CaptureRoutingResponseLatency(endpoint, 0, time.Time{}, 2*time.Millisecond)
+			Expect(getMetrics(r.Port())).To(ContainSubstring("latency_bucket{component=\"CloudController\",le=\"2\"} 1"))
+		})
+
+		It("does not send the latency for the given component if switched off", func() {
+			m.perRequestMetricsReporting = false
+			endpoint.Tags = map[string]string{"component": "CloudController"}
+			m.CaptureRoutingResponseLatency(endpoint, 0, time.Time{}, 2*time.Millisecond)
+			Expect(getMetrics(r.Port())).NotTo(ContainSubstring("\nlatency_bucket"))
 		})
 	})
 })
