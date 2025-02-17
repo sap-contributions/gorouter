@@ -1,8 +1,6 @@
 package main
 
 import (
-	mr "code.cloudfoundry.org/go-metric-registry"
-	"code.cloudfoundry.org/gorouter/metrics_prometheus"
 	"context"
 	"crypto/tls"
 	"flag"
@@ -12,6 +10,9 @@ import (
 	"runtime"
 	"syscall"
 	"time"
+
+	mr "code.cloudfoundry.org/go-metric-registry"
+	"code.cloudfoundry.org/gorouter/metrics_prometheus"
 
 	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/debugserver"
@@ -141,7 +142,7 @@ func main() {
 	var promMetrics *metrics_prometheus.Metrics
 	if c.Prometheus.Enabled {
 		promRegistry = metrics_prometheus.NewMetricsRegistry(c.Prometheus)
-		promMetrics = metrics_prometheus.NewMetrics(promRegistry, c.PerRequestMetricsReporting)
+		promMetrics = metrics_prometheus.NewMetrics(promRegistry, c.PerRequestMetricsReporting, c.Prometheus.Meters)
 	}
 
 	// setup metrics via prometheus

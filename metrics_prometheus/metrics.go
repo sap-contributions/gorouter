@@ -1,15 +1,16 @@
 package metrics_prometheus
 
 import (
-	mr "code.cloudfoundry.org/go-metric-registry"
-	"code.cloudfoundry.org/gorouter/config"
-	"code.cloudfoundry.org/gorouter/metrics"
-	"code.cloudfoundry.org/gorouter/route"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	mr "code.cloudfoundry.org/go-metric-registry"
+	"code.cloudfoundry.org/gorouter/config"
+	"code.cloudfoundry.org/gorouter/metrics"
+	"code.cloudfoundry.org/gorouter/route"
 )
 
 // Metrics represents a prometheus metrics endpoint.
@@ -56,15 +57,15 @@ var _ interface {
 	metrics.RouteRegistryReporter
 } = &Metrics{}
 
-func NewMetrics(registry *mr.Registry, perRequestMetricsReporting bool) *Metrics {
+func NewMetrics(registry *mr.Registry, perRequestMetricsReporting bool, meterConfig config.MetersConfig) *Metrics {
 	return &Metrics{
 		RouteRegistration:           registry.NewCounterVec("registry_message", "number of route registration messages", []string{"component", "action"}),
 		RouteUnregistration:         registry.NewCounterVec("unregistry_message", "number of unregister messages", []string{"component"}),
 		RoutesPruned:                registry.NewCounter("routes_pruned", "number of pruned routes"),
 		TotalRoutes:                 registry.NewGauge("total_routes", "number of total routes"),
 		TimeSinceLastRegistryUpdate: registry.NewGauge("ms_since_last_registry_update", "time since last registry update in ms"),
-		RouteLookupTime:             registry.NewHistogram("route_lookup_time", "route lookup time per request in ns", []float64{10_000, 20_000, 30_000, 40_000, 50_000, 60_000, 70_000, 80_000, 90_000, 100_000}),
-		RouteRegistrationLatency:    registry.NewHistogram("route_registration_latency", "route registration latency in ms", []float64{0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2}), // TODO: validate
+		RouteLookupTime:             registry.NewHistogram("route_lookup_time", "route lookup time per request in ns", meterConfig.RouteLookupTimeBuckets),
+		RouteRegistrationLatency:    registry.NewHistogram("route_registration_latency", "route registration latency in ms", meterConfig.RouteRegistrationLatencyBuckets),
 		RoutingRequest:              registry.NewCounterVec("total_requests", "number of routing requests", []string{"component", "is_routed_app"}),
 		BadRequest:                  registry.NewCounter("rejected_requests", "number of rejected requests"),
 		BadGateway:                  registry.NewCounter("bad_gateways", "number of bad gateway errors received from backends"),
@@ -77,7 +78,7 @@ func NewMetrics(registry *mr.Registry, perRequestMetricsReporting bool) *Metrics
 		WebsocketFailures:           registry.NewCounter("websocket_failures", "websocket failure"),
 		Responses:                   registry.NewCounterVec("responses", "number of responses", []string{"status_group"}),
 		RouteServicesResponses:      registry.NewCounterVec("responses_route_services", "number of responses for route services", []string{"status_group"}),
-		RoutingResponseLatency:      registry.NewHistogramVec("latency", "routing response latency in ms", []string{"component"}, []float64{0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2}),
+		RoutingResponseLatency:      registry.NewHistogramVec("latency", "routing response latency in ms", []string{"component"}, meterConfig.RoutingResponseLatencyHistogramBuckets),
 		perRequestMetricsReporting:  perRequestMetricsReporting,
 	}
 }

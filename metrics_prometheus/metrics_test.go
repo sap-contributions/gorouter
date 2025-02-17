@@ -1,15 +1,16 @@
 package metrics_prometheus
 
 import (
-	metrics "code.cloudfoundry.org/go-metric-registry"
-	"code.cloudfoundry.org/gorouter/config"
-	"code.cloudfoundry.org/gorouter/route"
 	"fmt"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	"io"
 	"net/http"
 	"time"
+
+	metrics "code.cloudfoundry.org/go-metric-registry"
+	"code.cloudfoundry.org/gorouter/config"
+	"code.cloudfoundry.org/gorouter/route"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 var m *Metrics
@@ -22,9 +23,9 @@ var _ = Describe("Metrics", func() {
 
 		BeforeEach(func() {
 			var perRequestMetricsReporting = true
-			var config = config.PrometheusConfig{Port: 0}
+			var config = config.PrometheusConfig{Port: 0, Meters: getMetersConfig()}
 			r = NewMetricsRegistry(config)
-			m = NewMetrics(r, perRequestMetricsReporting)
+			m = NewMetrics(r, perRequestMetricsReporting, config.Meters)
 			endpoint = new(route.Endpoint)
 		})
 		AfterEach(func() {
@@ -91,9 +92,9 @@ var _ = Describe("Metrics", func() {
 	Context("sends backend errors metrics", func() {
 		BeforeEach(func() {
 			var perRequestMetricsReporting = true
-			var config = config.PrometheusConfig{Port: 0}
+			var config = config.PrometheusConfig{Port: 0, Meters: getMetersConfig()}
 			r = NewMetricsRegistry(config)
-			m = NewMetrics(r, perRequestMetricsReporting)
+			m = NewMetrics(r, perRequestMetricsReporting, config.Meters)
 		})
 		AfterEach(func() {
 			m.perRequestMetricsReporting = true
@@ -134,9 +135,9 @@ var _ = Describe("Metrics", func() {
 	Context("sends lookup error metrics", func() {
 		BeforeEach(func() {
 			var perRequestMetricsReporting = true
-			var config = config.PrometheusConfig{Port: 0}
+			var config = config.PrometheusConfig{Port: 0, Meters: getMetersConfig()}
 			r = NewMetricsRegistry(config)
-			m = NewMetrics(r, perRequestMetricsReporting)
+			m = NewMetrics(r, perRequestMetricsReporting, config.Meters)
 		})
 		AfterEach(func() {
 			m.perRequestMetricsReporting = true
@@ -179,9 +180,9 @@ var _ = Describe("Metrics", func() {
 
 		BeforeEach(func() {
 			var perRequestMetricsReporting = true
-			var config = config.PrometheusConfig{Port: 0}
+			var config = config.PrometheusConfig{Port: 0, Meters: getMetersConfig()}
 			r = NewMetricsRegistry(config)
-			m = NewMetrics(r, perRequestMetricsReporting)
+			m = NewMetrics(r, perRequestMetricsReporting, config.Meters)
 			endpoint = new(route.Endpoint)
 		})
 		AfterEach(func() {
@@ -285,9 +286,9 @@ var _ = Describe("Metrics", func() {
 
 		BeforeEach(func() {
 			var perRequestMetricsReporting = true
-			var config = config.PrometheusConfig{Port: 0}
+			var config = config.PrometheusConfig{Port: 0, Meters: getMetersConfig()}
 			r = NewMetricsRegistry(config)
-			m = NewMetrics(r, perRequestMetricsReporting)
+			m = NewMetrics(r, perRequestMetricsReporting, config.Meters)
 			response = http.Response{}
 		})
 		AfterEach(func() {
@@ -355,9 +356,9 @@ var _ = Describe("Metrics", func() {
 
 		BeforeEach(func() {
 			var perRequestMetricsReporting = true
-			var config = config.PrometheusConfig{Port: 0}
+			var config = config.PrometheusConfig{Port: 0, Meters: getMetersConfig()}
 			r = NewMetricsRegistry(config)
-			m = NewMetrics(r, perRequestMetricsReporting)
+			m = NewMetrics(r, perRequestMetricsReporting, config.Meters)
 			endpoint = new(route.Endpoint)
 		})
 		AfterEach(func() {
@@ -391,6 +392,14 @@ var _ = Describe("Metrics", func() {
 		})
 	})
 })
+
+func getMetersConfig() config.MetersConfig {
+	return config.MetersConfig{
+		RouteLookupTimeBuckets:                 []float64{10_000, 20_000, 30_000, 40_000, 50_000, 60_000, 70_000, 80_000, 90_000, 100_000},
+		RouteRegistrationLatencyBuckets:        []float64{0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2},
+		RoutingResponseLatencyHistogramBuckets: []float64{0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2},
+	}
+}
 
 func getMetrics(port string) string {
 	addr := fmt.Sprintf("http://127.0.0.1:%s/metrics", port)
