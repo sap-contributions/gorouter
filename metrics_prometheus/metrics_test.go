@@ -165,6 +165,16 @@ var _ = Describe("Metrics", func() {
 		})
 	})
 	Context("websocket metrics", func() {
+		BeforeEach(func() {
+			var perRequestMetricsReporting = true
+			var config = config.PrometheusConfig{Port: 0, Meters: getMetersConfig()}
+			r = NewMetricsRegistry(config)
+			m = NewMetrics(r, perRequestMetricsReporting, config.Meters)
+		})
+		AfterEach(func() {
+			m.perRequestMetricsReporting = true
+		})
+
 		It("increments the websocket upgrades metric", func() {
 			m.CaptureWebSocketUpdate()
 			Expect(getMetrics(r.Port())).To(ContainSubstring("websocket_upgrades 1"))
