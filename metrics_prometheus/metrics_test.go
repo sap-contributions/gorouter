@@ -232,6 +232,16 @@ var _ = Describe("Metrics", func() {
 	})
 
 	Context("increments the response metrics", func() {
+		BeforeEach(func() {
+			var perRequestMetricsReporting = true
+			var config = config.PrometheusConfig{Port: 0, Meters: getMetersConfig()}
+			r = NewMetricsRegistry(config)
+			m = NewMetrics(r, perRequestMetricsReporting, config.Meters)
+		})
+		AfterEach(func() {
+			m.perRequestMetricsReporting = true
+		})
+
 		It("increments the 2XX response metrics", func() {
 			m.CaptureRoutingResponse(200)
 			Expect(getMetrics(r.Port())).To(ContainSubstring("responses{status_group=\"2xx\"} 1"))
@@ -274,10 +284,10 @@ var _ = Describe("Metrics", func() {
 
 		It("increments the XXX response metrics with null response", func() {
 			m.CaptureRoutingResponse(0)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("responses{status_group=\"xxx\"} 3")) // from the prev It node
+			Expect(getMetrics(r.Port())).To(ContainSubstring("responses{status_group=\"xxx\"} 1"))
 
 			m.CaptureRoutingResponse(0)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("responses{status_group=\"xxx\"} 4"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("responses{status_group=\"xxx\"} 2"))
 		})
 	})
 
