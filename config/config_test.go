@@ -250,16 +250,16 @@ prometheus:
 			var b = []byte(`
 prometheus:
   meters:
-    route_lookup_time_bucket: [0, 100, 10000]
-    route_registration_latency_buckets: [-10, 0, 10]
+    route_lookup_time_histogram_buckets: [0, 100, 10000]
+    route_registration_latency_histogram_buckets: [-10, 0, 10]
     routing_response_latency_histogram_buckets: [0.1, 0.5, 1]
 `)
 
 			err := config.Initialize(b)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(config.Prometheus.Meters.RouteLookupTimeBuckets).To(Equal([]float64{0, 100, 10000}))
-			Expect(config.Prometheus.Meters.RouteRegistrationLatencyBuckets).To(Equal([]float64{-10, 0, 10}))
+			Expect(config.Prometheus.Meters.RouteLookupTimeHistogramBuckets).To(Equal([]float64{0, 100, 10000}))
+			Expect(config.Prometheus.Meters.RouteRegistrationLatencyHistogramBuckets).To(Equal([]float64{-10, 0, 10}))
 			Expect(config.Prometheus.Meters.RoutingResponseLatencyHistogramBuckets).To(Equal([]float64{0.1, 0.5, 1}))
 		})
 

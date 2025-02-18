@@ -415,9 +415,9 @@ var _ = Describe("Metrics", func() {
 
 func getMetersConfig() config.MetersConfig {
 	return config.MetersConfig{
-		RouteLookupTimeBuckets:                 []float64{10_000, 20_000, 30_000, 40_000, 50_000, 60_000, 70_000, 80_000, 90_000, 100_000},
-		RouteRegistrationLatencyBuckets:        []float64{0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2},
-		RoutingResponseLatencyHistogramBuckets: []float64{0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2},
+		RouteLookupTimeHistogramBuckets:          []float64{10_000, 20_000, 30_000, 40_000, 50_000, 60_000, 70_000, 80_000, 90_000, 100_000},
+		RouteRegistrationLatencyHistogramBuckets: []float64{0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2},
+		RoutingResponseLatencyHistogramBuckets:   []float64{0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2},
 	}
 }
 

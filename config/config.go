@@ -125,15 +125,15 @@ var defaultPrometheusConfig = PrometheusConfig{
 }
 
 type MetersConfig struct {
-	RouteLookupTimeBuckets                 []float64 `yaml:"route_lookup_time_bucket,omitempty"`
-	RouteRegistrationLatencyBuckets        []float64 `yaml:"route_registration_latency_buckets,omitempty"`
-	RoutingResponseLatencyHistogramBuckets []float64 `yaml:"routing_response_latency_histogram_buckets,omitempty"`
+	RouteLookupTimeHistogramBuckets          []float64 `yaml:"route_lookup_time_histogram_buckets,omitempty"`
+	RouteRegistrationLatencyHistogramBuckets []float64 `yaml:"route_registration_latency_histogram_buckets,omitempty"`
+	RoutingResponseLatencyHistogramBuckets   []float64 `yaml:"routing_response_latency_histogram_buckets,omitempty"`
 }
 
 var defaultMetersConfig = MetersConfig{
-	RouteLookupTimeBuckets:                 []float64{10_000, 20_000, 30_000, 40_000, 50_000, 60_000, 70_000, 80_000, 90_000, 100_000},
-	RouteRegistrationLatencyBuckets:        []float64{0.1, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4},
-	RoutingResponseLatencyHistogramBuckets: []float64{1, 2, 4, 6, 8, 10, 20, 40, 50, 100, 500, 1000},
+	RouteLookupTimeHistogramBuckets:          []float64{10_000, 20_000, 30_000, 40_000, 50_000, 60_000, 70_000, 80_000, 90_000, 100_000},
+	RouteRegistrationLatencyHistogramBuckets: []float64{0.1, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4},
+	RoutingResponseLatencyHistogramBuckets:   []float64{1, 2, 4, 6, 8, 10, 20, 40, 50, 100, 500, 1000},
 }
 
 type NatsConfig struct {
