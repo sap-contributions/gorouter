@@ -204,42 +204,27 @@ var _ = Describe("Metrics", func() {
 		It("increments the total requests metric", func() {
 			endpoint.Tags = map[string]string{}
 			m.CaptureRoutingRequest(endpoint)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("total_requests{component=\"\",is_routed_app=\"no\"} 1"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("total_requests{component=\"\"} 1"))
 
 			m.CaptureRoutingRequest(endpoint)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("total_requests{component=\"\",is_routed_app=\"no\"} 2"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("total_requests{component=\"\"} 2"))
 		})
 
 		It("increments the requests metric for the given component", func() {
 			endpoint.Tags = map[string]string{"component": "CloudController"}
 			m.CaptureRoutingRequest(endpoint)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("total_requests{component=\"CloudController\",is_routed_app=\"no\"} 1"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("total_requests{component=\"CloudController\"} 1"))
 
 			m.CaptureRoutingRequest(endpoint)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("total_requests{component=\"CloudController\",is_routed_app=\"no\"} 2"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("total_requests{component=\"CloudController\"} 2"))
 
 			endpoint.Tags["component"] = "UAA"
 			m.CaptureRoutingRequest(endpoint)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("total_requests{component=\"CloudController\",is_routed_app=\"no\"} 2"))
-			Expect(getMetrics(r.Port())).To(ContainSubstring("total_requests{component=\"UAA\",is_routed_app=\"no\"} 1"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("total_requests{component=\"CloudController\"} 2"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("total_requests{component=\"UAA\"} 1"))
 
 			m.CaptureRoutingRequest(endpoint)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("total_requests{component=\"UAA\",is_routed_app=\"no\"} 2"))
-		})
-
-		It("increments the request metric for the routed app", func() {
-			endpoint.Tags = map[string]string{"component": "dea-1"}
-			m.CaptureRoutingRequest(endpoint)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("total_requests{component=\"dea-*\",is_routed_app=\"yes\"} 1"))
-
-			endpoint.Tags["component"] = "dea-3"
-			m.CaptureRoutingRequest(endpoint)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("total_requests{component=\"dea-*\",is_routed_app=\"yes\"} 2"))
-
-			endpoint.Tags["component"] = "CustomController"
-			m.CaptureRoutingRequest(endpoint)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("total_requests{component=\"dea-*\",is_routed_app=\"yes\"} 2"))
-			Expect(getMetrics(r.Port())).To(ContainSubstring("total_requests{component=\"CustomController\",is_routed_app=\"no\"} 1"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("total_requests{component=\"UAA\"} 2"))
 		})
 	})
 

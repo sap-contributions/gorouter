@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	mr "code.cloudfoundry.org/go-metric-registry"
+
 	"code.cloudfoundry.org/gorouter/config"
 	"code.cloudfoundry.org/gorouter/metrics"
 	"code.cloudfoundry.org/gorouter/route"
@@ -66,7 +66,7 @@ func NewMetrics(registry *mr.Registry, perRequestMetricsReporting bool, meterCon
 		TimeSinceLastRegistryUpdate: registry.NewGauge("ms_since_last_registry_update", "time since last registry update in ms"),
 		RouteLookupTime:             registry.NewHistogram("route_lookup_time", "route lookup time per request in ns", meterConfig.RouteLookupTimeHistogramBuckets),
 		RouteRegistrationLatency:    registry.NewHistogram("route_registration_latency", "route registration latency in ms", meterConfig.RouteRegistrationLatencyHistogramBuckets),
-		RoutingRequest:              registry.NewCounterVec("total_requests", "number of routing requests", []string{"component", "is_routed_app"}),
+		RoutingRequest:              registry.NewCounterVec("total_requests", "number of routing requests", []string{"component"}),
 		BadRequest:                  registry.NewCounter("rejected_requests", "number of rejected requests"),
 		BadGateway:                  registry.NewCounter("bad_gateways", "number of bad gateway errors received from backends"),
 		EmptyContentLengthHeader:    registry.NewCounter("empty_content_length_header", "number of requests with the empty content length header"),
@@ -154,12 +154,7 @@ func (metrics *Metrics) CaptureEmptyContentLengthHeader() {
 
 // CaptureRoutingRequest used to capture backend round trips
 func (metrics *Metrics) CaptureRoutingRequest(b *route.Endpoint) {
-	component := b.Component()
-	labels := []string{component, "no"} // component, is-routed-app
-	if strings.HasPrefix(component, "dea-") {
-		labels = []string{"dea-*", "yes"}
-	}
-	metrics.RoutingRequest.Add(1, labels)
+	metrics.RoutingRequest.Add(1, []string{b.Component()})
 }
 
 func (metrics *Metrics) CaptureRoutingResponse(statusCode int) {

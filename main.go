@@ -12,6 +12,7 @@ import (
 	"time"
 
 	mr "code.cloudfoundry.org/go-metric-registry"
+
 	"code.cloudfoundry.org/gorouter/metrics_prometheus"
 
 	"code.cloudfoundry.org/clock"
@@ -287,7 +288,7 @@ func main() {
 
 	go func() {
 		time.Sleep(c.RouteLatencyMetricMuzzleDuration)     // this way we avoid reporting metrics for pre-existing routes
-		registryMetrics.UnmuzzleRouteRegistrationLatency() // TODO: look at this
+		registryMetrics.UnmuzzleRouteRegistrationLatency() // Required for Envelope V1. Keep it while we have both Envelope V1 and Prometheus.
 	}()
 
 	<-monitor.Ready()
