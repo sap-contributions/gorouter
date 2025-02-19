@@ -7,10 +7,11 @@ import (
 	"time"
 
 	metrics "code.cloudfoundry.org/go-metric-registry"
-	"code.cloudfoundry.org/gorouter/config"
-	"code.cloudfoundry.org/gorouter/route"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"code.cloudfoundry.org/gorouter/config"
+	"code.cloudfoundry.org/gorouter/route"
 )
 
 var m *Metrics
@@ -43,16 +44,17 @@ var _ = Describe("Metrics", func() {
 			Expect(getMetrics(r.Port())).To(ContainSubstring(expected))
 		})
 
-		It("sends number of nats messages received from each component", func() {
+		It("sends number of route unregistration messages received from each component", func() {
 			endpoint.Tags = map[string]string{"component": "uaa"}
-			m.CaptureRegistryMessage(endpoint, route.ADDED.String())
-			expected := fmt.Sprintf("registry_message{action=\"%s\",component=\"uaa\"} 1", route.ADDED.String())
-			Expect(getMetrics(r.Port())).To(ContainSubstring(expected))
+			m.CaptureUnregistryMessage(endpoint)
+			Expect(getMetrics(r.Port())).To(ContainSubstring("registry_message{component=\"uaa\"} 1"))
+
+			m.CaptureUnregistryMessage(endpoint)
+			Expect(getMetrics(r.Port())).To(ContainSubstring("registry_message{component=\"uaa\"} 2"))
 
 			endpoint.Tags = map[string]string{"component": "route-emitter"}
-			m.CaptureRegistryMessage(endpoint, route.ADDED.String())
-			expected = fmt.Sprintf("registry_message{action=\"%s\",component=\"route-emitter\"} 1", route.ADDED.String())
-			Expect(getMetrics(r.Port())).To(ContainSubstring(expected))
+			m.CaptureUnregistryMessage(endpoint)
+			Expect(getMetrics(r.Port())).To(ContainSubstring("registry_message{component=\"route-emitter\"} 1"))
 		})
 
 		It("sends the total routes", func() {
