@@ -1,7 +1,6 @@
 package proxy_test
 
 import (
-	"code.cloudfoundry.org/gorouter/metrics"
 	"crypto/tls"
 	"crypto/x509"
 	"net"
@@ -10,6 +9,8 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"code.cloudfoundry.org/gorouter/metrics"
 
 	fake_registry "code.cloudfoundry.org/go-metric-registry/testhelpers"
 	"github.com/cloudfoundry/dropsonde"
@@ -90,7 +91,7 @@ var _ = BeforeEach(func() {
 
 var _ = JustBeforeEach(func() {
 	var err error
-	r = registry.NewRouteRegistry(logger.Logger, conf, []metrics.RouteRegistryReporter{new(fakes.FakeRouteRegistryReporter)})
+	r = registry.NewRouteRegistry(logger.Logger, conf, metrics.MultiRouteRegistryReporter{new(fakes.FakeRouteRegistryReporter)})
 
 	fakeEmitter = fake.NewFakeEventEmitter("fake")
 	dropsonde.InitializeWithEmitter(fakeEmitter)
