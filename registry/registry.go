@@ -61,7 +61,7 @@ type RouteRegistry struct {
 	DefaultLoadBalancingAlgorithm string
 }
 
-func NewRouteRegistry(logger *slog.Logger, c *config.Config, multiReporter metrics.MultiRouteRegistryReporter) *RouteRegistry {
+func NewRouteRegistry(logger *slog.Logger, c *config.Config, multiReporter metrics.RouteRegistryReporter) *RouteRegistry {
 	r := &RouteRegistry{}
 	r.logger = logger
 	r.byURI = container.NewTrie()
