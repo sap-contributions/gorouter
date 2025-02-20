@@ -59,11 +59,11 @@ var _ = Describe("Metrics", func() {
 
 		It("sends route statistics", func() {
 			m.CaptureRouteStats(11, 100)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("total_routes 12"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("total_routes 11"))
 			Expect(getMetrics(r.Port())).To(ContainSubstring("ms_since_last_registry_update 100"))
 
 			m.CaptureRouteStats(11, 200)
-			Expect(getMetrics(r.Port())).To(ContainSubstring("total_routes 12"))
+			Expect(getMetrics(r.Port())).To(ContainSubstring("total_routes 11"))
 			Expect(getMetrics(r.Port())).To(ContainSubstring("ms_since_last_registry_update 200"))
 
 			m.CaptureRouteStats(15, 200)

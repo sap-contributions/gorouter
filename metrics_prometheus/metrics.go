@@ -119,7 +119,7 @@ func (metrics *Metrics) CaptureRouteRegistrationLatency(t time.Duration) {
 }
 
 // UnmuzzleRouteRegistrationLatency should set a flag which suppresses metric data.
-// That makes sense for Envelope V1 where we send it to collector any time we got new value
+// Deprecated: that makes sense for Envelope V1 where we send it to collector any time we got new value
 // but is unnecessary for Prometheus where data is buffered and sent to collector on constant frequency base.
 // We still need this method though to fulfil the interface.
 func (metrics *Metrics) UnmuzzleRouteRegistrationLatency() {}
