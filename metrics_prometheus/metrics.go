@@ -24,7 +24,7 @@ type Metrics struct {
 	RouteRegistrationLatency    mr.Histogram
 	RoutingRequest              mr.CounterVec
 	BadRequest                  mr.Counter
-	BadGateway                  mr.Counter // TODO from b1tamara: rename to BackendBadGateway?
+	BadGateway                  mr.Counter
 	EmptyContentLengthHeader    mr.Counter
 	BackendInvalidID            mr.Counter
 	BackendInvalidTLSCert       mr.Counter

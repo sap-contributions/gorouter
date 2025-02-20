@@ -46,8 +46,9 @@ type RouteRegistryReporter interface {
 	CaptureLookupTime(t time.Duration)
 	CaptureRegistryMessage(msg ComponentTagged, action string)
 	CaptureRouteRegistrationLatency(t time.Duration)
-	UnmuzzleRouteRegistrationLatency()
 	CaptureUnregistryMessage(msg ComponentTagged)
+	// Deprecated: used only in Envelope v1, should be removed when Envelope v1 support is eliminated
+	UnmuzzleRouteRegistrationLatency()
 }
 
 type CompositeReporter struct {

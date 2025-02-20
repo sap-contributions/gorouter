@@ -15,11 +15,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/metrics"
 )
 
-var _ interface {
-	ProxyReporter
-	RouteRegistryReporter
-} = &MetricsReporter{}
-
 type MetricsReporter struct {
 	Sender                     metrics.MetricSender
 	Batcher                    metrics.MetricBatcher

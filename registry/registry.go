@@ -45,7 +45,7 @@ type RouteRegistry struct {
 	pruneStaleDropletsInterval time.Duration
 	dropletStaleThreshold      time.Duration
 
-	multiReporter metrics.MultiRouteRegistryReporter
+	multiReporter metrics.RouteRegistryReporter
 
 	ticker           *time.Ticker
 	timeOfLastUpdate time.Time
@@ -87,15 +87,15 @@ func (r *RouteRegistry) Register(uri route.Uri, endpoint *route.Endpoint) {
 		return
 	}
 
-	result := r.register(uri, endpoint)
+	endpointAdded := r.register(uri, endpoint)
 
-	r.multiReporter.CaptureRegistryMessage(endpoint, result.String())
+	r.multiReporter.CaptureRegistryMessage(endpoint, endpointAdded.String())
 
-	if result == route.ADDED && !endpoint.UpdatedAt.IsZero() {
+	if endpointAdded == route.ADDED && !endpoint.UpdatedAt.IsZero() {
 		r.multiReporter.CaptureRouteRegistrationLatency(time.Since(endpoint.UpdatedAt))
 	}
 
-	switch result {
+	switch endpointAdded {
 	case route.ADDED:
 		if r.logger.Enabled(context.Background(), slog.LevelInfo) {
 			r.logger.Info("endpoint-registered", buildSlogAttrs(uri, endpoint)...)
