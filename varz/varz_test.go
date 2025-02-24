@@ -1,7 +1,6 @@
 package varz_test
 
 import (
-	"code.cloudfoundry.org/gorouter/metrics"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -27,7 +26,7 @@ var _ = Describe("Varz", func() {
 		logger = test_util.NewTestLogger("test")
 		cfg, err := config.DefaultConfig()
 		Expect(err).ToNot(HaveOccurred())
-		Registry = registry.NewRouteRegistry(logger.Logger, cfg, metrics.MultiRouteRegistryReporter{new(fakes.FakeRouteRegistryReporter)})
+		Registry = registry.NewRouteRegistry(logger.Logger, cfg, new(fakes.FakeRouteRegistryReporter))
 		Varz = NewVarz(Registry)
 	})
 

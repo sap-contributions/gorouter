@@ -10,8 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"code.cloudfoundry.org/gorouter/metrics"
-
 	fake_registry "code.cloudfoundry.org/go-metric-registry/testhelpers"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/emitter/fake"
@@ -91,7 +89,7 @@ var _ = BeforeEach(func() {
 
 var _ = JustBeforeEach(func() {
 	var err error
-	r = registry.NewRouteRegistry(logger.Logger, conf, metrics.MultiRouteRegistryReporter{new(fakes.FakeRouteRegistryReporter)})
+	r = registry.NewRouteRegistry(logger.Logger, conf, new(fakes.FakeRouteRegistryReporter))
 
 	fakeEmitter = fake.NewFakeEventEmitter("fake")
 	dropsonde.InitializeWithEmitter(fakeEmitter)

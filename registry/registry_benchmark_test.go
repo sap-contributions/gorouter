@@ -46,7 +46,7 @@ func setupConfig() *config.Config {
 	return c
 }
 func BenchmarkRegisterWith100KRoutes(b *testing.B) {
-	r := registry.NewRouteRegistry(logger.Logger, configObj, metrics.MultiRouteRegistryReporter{reporter})
+	r := registry.NewRouteRegistry(logger.Logger, configObj, reporter)
 
 	for i := 0; i < 100000; i++ {
 		r.Register(route.Uri(fmt.Sprintf("foo%d.example.com", i)), fooEndpoint)
@@ -61,7 +61,7 @@ func BenchmarkRegisterWith100KRoutes(b *testing.B) {
 }
 
 func BenchmarkRegisterWithOneRoute(b *testing.B) {
-	r := registry.NewRouteRegistry(logger.Logger, configObj, metrics.MultiRouteRegistryReporter{reporter})
+	r := registry.NewRouteRegistry(logger.Logger, configObj, reporter)
 
 	r.Register("foo.example.com", fooEndpoint)
 
@@ -74,7 +74,7 @@ func BenchmarkRegisterWithOneRoute(b *testing.B) {
 }
 
 func BenchmarkRegisterWithConcurrentLookupWith100kRoutes(b *testing.B) {
-	r := registry.NewRouteRegistry(logger.Logger, configObj, metrics.MultiRouteRegistryReporter{reporter})
+	r := registry.NewRouteRegistry(logger.Logger, configObj, reporter)
 	maxRoutes := 100000
 	routeUris := make([]route.Uri, maxRoutes)
 
