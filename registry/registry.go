@@ -45,7 +45,7 @@ type RouteRegistry struct {
 	pruneStaleDropletsInterval time.Duration
 	dropletStaleThreshold      time.Duration
 
-	multiReporter metrics.RouteRegistryReporter
+	reporter metrics.RouteRegistryReporter
 
 	ticker           *time.Ticker
 	timeOfLastUpdate time.Time
@@ -61,7 +61,7 @@ type RouteRegistry struct {
 	DefaultLoadBalancingAlgorithm string
 }
 
-func NewRouteRegistry(logger *slog.Logger, c *config.Config, multiReporter metrics.RouteRegistryReporter) *RouteRegistry {
+func NewRouteRegistry(logger *slog.Logger, c *config.Config, reporter metrics.RouteRegistryReporter) *RouteRegistry {
 	r := &RouteRegistry{}
 	r.logger = logger
 	r.byURI = container.NewTrie()
@@ -70,7 +70,7 @@ func NewRouteRegistry(logger *slog.Logger, c *config.Config, multiReporter metri
 	r.dropletStaleThreshold = c.DropletStaleThreshold
 	r.suspendPruning = func() bool { return false }
 
-	r.multiReporter = multiReporter
+	r.reporter = reporter
 
 	r.routingTableShardingMode = c.RoutingTableShardingMode
 	r.isolationSegments = c.IsolationSegments
@@ -89,10 +89,10 @@ func (r *RouteRegistry) Register(uri route.Uri, endpoint *route.Endpoint) {
 
 	endpointAdded := r.register(uri, endpoint)
 
-	r.multiReporter.CaptureRegistryMessage(endpoint, endpointAdded.String())
+	r.reporter.CaptureRegistryMessage(endpoint, endpointAdded.String())
 
 	if endpointAdded == route.ADDED && !endpoint.UpdatedAt.IsZero() {
-		r.multiReporter.CaptureRouteRegistrationLatency(time.Since(endpoint.UpdatedAt))
+		r.reporter.CaptureRouteRegistrationLatency(time.Since(endpoint.UpdatedAt))
 	}
 
 	switch endpointAdded {
@@ -171,7 +171,7 @@ func (r *RouteRegistry) Unregister(uri route.Uri, endpoint *route.Endpoint) {
 
 	r.unregister(uri, endpoint)
 
-	r.multiReporter.CaptureUnregistryMessage(endpoint)
+	r.reporter.CaptureUnregistryMessage(endpoint)
 
 }
 
@@ -213,7 +213,7 @@ func (r *RouteRegistry) Lookup(uri route.Uri) *route.EndpointPool {
 
 	pool := r.lookup(uri)
 
-	r.multiReporter.CaptureLookupTime(time.Since(started))
+	r.reporter.CaptureLookupTime(time.Since(started))
 	return pool
 }
 
@@ -288,7 +288,7 @@ func (r *RouteRegistry) StartPruningCycle() {
 				r.logger.Debug("start-pruning-routes")
 				r.pruneStaleDroplets()
 				r.logger.Debug("finished-pruning-routes")
-				r.multiReporter.CaptureRouteStats(r.NumUris(), r.MSSinceLastUpdate())
+				r.reporter.CaptureRouteStats(r.NumUris(), r.MSSinceLastUpdate())
 			}
 		}()
 	}
@@ -389,7 +389,7 @@ func (r *RouteRegistry) pruneStaleDroplets() {
 				slog.Any("endpoints", addresses),
 				slog.String("isolation_segment", isolationSegment),
 			)
-			r.multiReporter.CaptureRoutesPruned(uint64(len(endpoints)))
+			r.reporter.CaptureRoutesPruned(uint64(len(endpoints)))
 		}
 	})
 }
