@@ -152,7 +152,7 @@ var _ = Describe("TLS to backends", func() {
 
 		f, err := os.ReadFile(testState.AccessLogFilePath())
 		Expect(err).NotTo(HaveOccurred())
-		fmt.Printf("contents %s", f)
+		GinkgoWriter.Printf("contents %s", f)
 
 		responseTime := parseTimestampsFromAccessLog("response_time", f)
 		gorouterTime := parseTimestampsFromAccessLog("gorouter_time", f)

@@ -2565,7 +2565,7 @@ var _ = Describe("Proxy", func() {
 				ln := test_util.RegisterConnHandler(r, "post-some-data", func(conn *test_util.HttpConn) {
 					req, err := http.ReadRequest(conn.Reader)
 					if err != nil {
-						fmt.Println(err)
+						GinkgoWriter.Println(err)
 						return
 					}
 					defer req.Body.Close()

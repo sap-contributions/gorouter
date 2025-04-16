@@ -411,7 +411,7 @@ var _ = Describe("Route Service Handler", func() {
 						duration := time.Since(start)
 
 						// This test does no warmup / cache and a single sample. Take with a grain of salt.
-						fmt.Printf("Time taken to process request with large allowlist: %s", duration)
+						GinkgoWriter.Printf("Time taken to process request with large allowlist: %s", duration)
 
 						Expect(resp.Code).To(Equal(http.StatusTeapot))
 

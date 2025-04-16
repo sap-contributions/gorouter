@@ -1470,7 +1470,7 @@ func appRegistered(routesUri string, app registeredApp) bool {
 func routeExists(routesEndpoint, routeName string) (bool, error) {
 	resp, err := http.Get(routesEndpoint)
 	if err != nil {
-		fmt.Println("Failed to get from routes endpoint")
+		GinkgoWriter.Println("Failed to get from routes endpoint")
 		return false, err
 	}
 	switch resp.StatusCode {
